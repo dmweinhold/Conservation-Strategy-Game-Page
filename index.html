@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Conservation Strategy Game</title>
+
+  <!-- PWA & Mobile Meta -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#6EA06E">
+  <link rel="manifest" href="manifest.json">
+
+  <!-- iOS PWA Support -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Conservation Game">
+  <link rel="apple-touch-icon" href="images/icon-192.png">
+
+  <!-- Phaser -->
+  <script src="https://cdn.jsdelivr.net/npm/phaser@3/dist/phaser.js"></script>
+
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background: #ddd;
+      font-family: sans-serif;
+    }
+
+    #landing-page {
+      background-color: #EDE8E1;
+      min-height: 100vh;
+      text-align: center;
+      padding: 40px;
+    }
+
+    #landing-page h2, #landing-page p {
+      color: #4D341A;
+    }
+
+    #landing-page a,
+    #landing-page button {
+      font-size: 16px;
+      padding: 12px 24px;
+      border-radius: 5px;
+      background-color: #4D341A;
+      color: white;
+      text-decoration: none;
+      border: none;
+      margin: 10px;
+      cursor: pointer;
+    }
+
+    #landing-page button#startButton {
+      font-size: 20px;
+      padding: 15px 40px;
+      background-color: #6EA06E;
+    }
+
+    #ui-container {
+      width: 300px;
+      margin: 10px auto;
+      background: #f9f9f9;
+      border: 1px solid #ccc;
+      padding: 10px;
+      border-radius: 5px;
+    }
+
+    #game-container {
+      text-align: center;
+    }
+
+    canvas {
+      display: block;
+      margin: 0 auto;
+    }
+
+    #terrain-wrapper {
+      text-align: center;
+      margin-top: 20px;
+    }
+
+    footer {
+      text-align: center;
+      padding-top: 30px;
+      color: #4D341A;
+      font-size: 14px;
+    }
+  </style>
+</head>
+
+<body>
+  <!-- Landing Page -->
+  <div id="landing-page">
+    <img src="images/title_cover.png" alt="Game Title" style="max-width: 30%; height: auto; margin-bottom: 30px;" />
+    <h2>Welcome to the Conservation Strategy Game!</h2>
+
+    <br><br>
+    <button id="startButton" type="button">Play Game</button>
+
+    <br><br>
+
+    <a href="images/Conservation_Game_UserManual.pdf" download>
+      📘 Download User Manual
+    </a>
+
+    <!-- Install App button (hidden until supported) -->
+    <button id="installAppBtn" type="button" style="display: none;">
+      📲 Install App for device or offline use
+    </button>
+
+    <p style="font-size: 13px; color: #4D341A; margin-top: 10px;">
+      <em>On iPhone/iPad, use Safari → Share → “Add to Home Screen” to install.</em>
+    </p>
+
+    <footer>
+      &copy; Diana Weinhold 2025, All Rights Reserved
+    </footer>
+  </div>
+
+  <!-- Game UI (hidden until game starts) -->
+  <div id="game-ui" style="display: none;">
+    <div id="ui-container"></div>
+
+    <div id="terrain-wrapper">
+      <img src="images/terrain.png" alt="Terrain" style="max-width: 50%; height: auto;" />
+    </div>
+
+    <div id="game-container"></div>
+  </div>
+
+  <!-- Game Scripts -->
+  <script type="module" src="UserInput.js"></script>
+  <script type="module" src="grid.js"></script>
+  <script type="module" src="strategy.js"></script>
+  <script type="module" src="gameLogic.js"></script>
+  <script type="module" src="main.js"></script>
+
+  <!-- Service Worker -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/service-worker.js')
+        .then(() => console.log('✅ Service Worker registered'))
+        .catch(err => console.error('❌ Service Worker registration failed:', err));
+    }
+  </script>
+
+  <!-- UI and Install Button Logic -->
+  <script>
+    // Show game UI when user clicks "Play Game"
+    document.getElementById('startButton').addEventListener('click', function () {
+      document.getElementById('landing-page').style.display = 'none';
+      document.getElementById('game-ui').style.display = 'block';
+    });
+
+    // PWA install prompt logic
+    let deferredPrompt;
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+
+      const installBtn = document.getElementById('installAppBtn');
+      installBtn.style.display = 'inline-block';
+
+      installBtn.addEventListener('click', () => {
+        installBtn.style.display = 'none';
+        deferredPrompt.prompt();
+
+        deferredPrompt.userChoice.then((choiceResult) => {
+          if (choiceResult.outcome === 'accepted') {
+            console.log('✅ User accepted the install prompt');
+          } else {
+            console.log('ℹ️ User dismissed the install prompt');
+          }
+          deferredPrompt = null;
+        });
+      });
+    });
+  </script>
+</body>
+</html>
