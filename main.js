@@ -16,24 +16,28 @@ import {
 /**
  * Compute dimensions for the "game" layout.
  */
-function computeGameDimensions(gridSize, margin = 5) {
+function computeGameDimensions(gridSize, mode = 'device', margin = 5) {
   const screenWidth = window.innerWidth;
   const screenHeight = window.innerHeight;
-
-  // For gameplay, use 95% of the smaller dimension
-  const available = Math.min(screenWidth * 0.95, screenHeight * 0.95);
-  const cellSize = Math.floor((available - (gridSize - 1) * margin) / gridSize);
-  const gridWidth = gridSize * cellSize + (gridSize - 1) * margin;
-  const gridHeight = gridWidth;
-
-  return {
-    gameWidth: screenWidth,
-    gameHeight: screenHeight,
-    gridWidth,
-    gridHeight,
-    cellSize
-  };
+  if (mode === 'desktop') {
+    // For desktop: use a maximum cell size (e.g. 100 pixels) or compute based on a smaller fraction.
+    const maxCellSize = 100;
+    // Compute available width (say, 70% of screen width) for the grid.
+    const availableWidth = screenWidth * 0.7;
+    const cellSize = Math.min(maxCellSize, Math.floor((availableWidth - (gridSize - 1) * margin) / gridSize));
+    const gridWidth = gridSize * cellSize + (gridSize - 1) * margin;
+    const gridHeight = gridSize * cellSize + (gridSize - 1) * margin;
+    return { gameWidth: screenWidth, gameHeight: screenHeight, gridWidth, gridHeight, cellSize };
+  } else {
+    // For devices, use 95% of the smaller dimension.
+    const available = Math.min(screenWidth * 0.95, screenHeight * 0.95);
+    const cellSize = Math.floor((available - (gridSize - 1) * margin) / gridSize);
+    const gridWidth = gridSize * cellSize + (gridSize - 1) * margin;
+    const gridHeight = gridWidth;
+    return { gameWidth: screenWidth, gameHeight: screenHeight, gridWidth, gridHeight, cellSize };
+  }
 }
+
 
 class MyScene extends Phaser.Scene {
   constructor() {
@@ -285,6 +289,8 @@ class MyScene extends Phaser.Scene {
  * "displacement" (if the user is Green).
  */
 // ✅ Final updated displayFinalResults function with left-aligned subheadings
+// ✅ Final updated displayFinalResults function with left-aligned subheadings
+
 export function displayFinalResults(scene) {
   const optimalSW = calculateOptimalSocialWelfare(scene.grid);
   const actualSW = calculateActualSocialWelfare(scene.grid);
@@ -419,9 +425,9 @@ export function displayFinalResults(scene) {
  */
 export function startPhaserGame(userOptions) {
   const gridSize = parseInt(userOptions.gridSize, 10);
-  const dims = computeGameDimensions(gridSize);
-  const { gameWidth, gameHeight } = dims;
-
+  const mode = window.innerWidth >= 1024 ? 'desktop' : 'device';
+  const dims = computeGameDimensions(gridSize, mode);
+  const { gameWidth, gameHeight, gridWidth, gridHeight, cellSize } = dims;
   const config = {
     type: Phaser.AUTO,
     width: gameWidth,
@@ -433,11 +439,13 @@ export function startPhaserGame(userOptions) {
     scene: [ MyScene ],
     parent: 'game-container'
   };
-
   const game = new Phaser.Game(config);
   game.scene.start('MyScene', {
-    ...userOptions
-    // We don't strictly need to pass gameWidth, gameHeight, etc. 
-    // because computeGameDimensions is re-run in create().
+    ...userOptions,
+    gameWidth,
+    gameHeight,
+    gridWidth,
+    gridHeight,
+    cellSize
   });
 }
