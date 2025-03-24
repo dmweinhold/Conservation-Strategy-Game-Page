@@ -26,8 +26,6 @@
       padding: 0;
     }
     body {
-      margin: 0;
-      padding: 0;
       background: #ddd;
       font-family: sans-serif;
     }
@@ -91,9 +89,30 @@
       color: #4D341A;
       font-size: 14px;
     }
+
+    @media (max-width: 768px) {
+      #ui-container {
+        width: 90%;
+        font-size: 14px;
+        padding: 8px;
+      }
+
+      #landing-page button,
+      #landing-page a {
+        font-size: 14px;
+        padding: 10px 20px;
+      }
+
+      #landing-page h2 {
+        font-size: 20px;
+      }
+
+      #terrain-wrapper img {
+        max-width: 90%;
+      }
+    }
   </style>
 </head>
-
 <body>
   <!-- Landing Page -->
   <div id="landing-page">
@@ -104,10 +123,9 @@
     <button id="startButton" type="button">Play Game</button>
 
     <br><br>
-
     <a href="images/Conservation_Game_UserManual.pdf" target="_blank" rel="noopener noreferrer"
-    style="display: inline-block; background-color: #4D341A; color: white; padding: 12px 24px; border-radius: 5px; text-decoration: none; margin-top: 80px;">
-   📘 Download User Manual
+      style="display: inline-block; background-color: #4D341A; color: white; padding: 12px 24px; border-radius: 5px; text-decoration: none; margin-top: 80px;">
+      📘 Download User Manual
     </a>
 
     <!-- Install App button (hidden until supported) -->

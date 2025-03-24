@@ -17,27 +17,28 @@ import {
  * A helper function to compute how large the game should be,
  * and how large the grid is, given user-selected gridSize.
  */
-function computeGameDimensions(gridSize, cellSize = 100, margin = 5) {
+function computeGameDimensions(gridSize, baseCellSize = 100, margin = 5) {
+  const isMobile = window.innerWidth < 768;
+
+  // Use smaller cell size on mobile to compress the grid
+  const cellSize = isMobile ? 70 : baseCellSize;
+
   const gridWidth  = gridSize * cellSize + (gridSize - 1) * margin;
   const gridHeight = gridSize * cellSize + (gridSize - 1) * margin;
 
-  // Minimum dimensions
-  const minWidth  = 1024;
-  const minHeight = 900;
+  const extraSide   = isMobile ? 100 : 500;
+  const extraTop    = isMobile ? 80 : 150;
+  const extraBottom = isMobile ? 200 : 450;
 
-  const extraSide   = 500;
-  const extraTop    = 150;
-  const extraBottom = 450;
-
-  // Detect window height to prevent overflow on mobile
   const screenHeight = window.innerHeight;
   const screenWidth = window.innerWidth;
 
-  const gameWidth  = Math.max(minWidth, gridWidth + extraSide, screenWidth);
-  const gameHeight = Math.min(screenHeight, Math.max(minHeight, gridHeight + extraTop + extraBottom));
+  const gameWidth  = Math.max(gridWidth + extraSide, screenWidth);
+  const gameHeight = Math.min(screenHeight, gridHeight + extraTop + extraBottom);
 
   return { gameWidth, gameHeight, gridWidth, gridHeight };
 }
+
 
 /**
  * Phaser scene class.
