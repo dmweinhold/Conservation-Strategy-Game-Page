@@ -339,13 +339,13 @@ export function displayFinalResults(scene) {
   statsArea.style.padding = '10px';
 
 
-// Subheading: Metrics
-const metricsHeading = document.createElement('div');
-metricsHeading.textContent = 'Metrics';
-metricsHeading.style.fontSize = '1.4em';
-metricsHeading.style.marginTop = '20px';
-metricsHeading.style.fontWeight = 'bold';
-container.appendChild(metricsHeading);
+  // Subheading: Metrics
+  const metricsHeading = document.createElement('div');
+  metricsHeading.textContent = 'Metrics';
+  metricsHeading.style.fontSize = '1.4em';
+  metricsHeading.style.marginTop = '20px';
+  metricsHeading.style.fontWeight = 'bold';
+  container.appendChild(metricsHeading);
 
   // Green Score
   const greenScoreLine = document.createElement('p');
@@ -371,13 +371,13 @@ container.appendChild(metricsHeading);
   }
 
 
-// Subheading: Performance
-const performanceHeading = document.createElement('div');
-performanceHeading.textContent = 'Performance';
-performanceHeading.style.fontSize = '1.4em';
-performanceHeading.style.marginTop = '20px';
-performanceHeading.style.fontWeight = 'bold';
-container.appendChild(performanceHeading);
+  // Subheading: Performance
+  const performanceHeading = document.createElement('div');
+  performanceHeading.textContent = 'Performance';
+  performanceHeading.style.fontSize = '1.4em';
+  performanceHeading.style.marginTop = '20px';
+  performanceHeading.style.fontWeight = 'bold';
+  container.appendChild(performanceHeading);
 
   // Welfare Loss
   let welfareLine = document.createElement('p');
