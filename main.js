@@ -14,8 +14,7 @@ import {
 } from './gameLogic.js';
 
 /**
- * Compute dimensions for the "game" mode only
- * (we are no longer using the "results" mode logic).
+ * Compute dimensions for the "game" layout.
  */
 function computeGameDimensions(gridSize, margin = 5) {
   const screenWidth = window.innerWidth;
@@ -36,9 +35,6 @@ function computeGameDimensions(gridSize, margin = 5) {
   };
 }
 
-/**
- * Phaser scene class.
- */
 class MyScene extends Phaser.Scene {
   constructor() {
     super({ key: 'MyScene' });
@@ -49,6 +45,7 @@ class MyScene extends Phaser.Scene {
   }
 
   preload() {
+    // Load images
     for (let i = 1; i <= 10; i++) {
       this.load.image('green' + i, 'images/C' + i + '.png');
       this.load.image('farmer' + i, 'images/A' + i + '.png');
@@ -70,7 +67,7 @@ class MyScene extends Phaser.Scene {
     } = this.userOptions;
 
     // Basic defaults
-    this.currentPlayer = 'farmer'; // Farmer always goes first (per your instructions)
+    this.currentPlayer = 'farmer'; // Farmer always goes first per your instructions
     if (!userTeam) userTeam = 'farmer';
     if (!computerStrategy) computerStrategy = 'naive profit maximizer';
     let correlationVal = parseFloat(correlation) || 0;
@@ -85,14 +82,14 @@ class MyScene extends Phaser.Scene {
     if (userTeam === 'farmer') {
       this.computerTeam = 'green';
       this.computerStrategy = computerStrategy;
-      this.leakage = 1.0; // always 1 if user is farmer
+      this.leakage = 1.0;  // Always 1 if user is farmer
     } else {
       this.computerTeam = 'farmer';
       this.computerStrategy = computerStrategy;
       this.leakage = requestedLeak;
     }
 
-    // Set background color
+    // Background color
     this.cameras.main.setBackgroundColor(0xEDE8E1);
 
     // Initialize scores/claims
@@ -105,25 +102,22 @@ class MyScene extends Phaser.Scene {
     this.cumGreenBAU = 0;
     this.cumFarmerDeduction = 0;
 
-    // Compute dimensions for "game" layout
+    // Compute "game" dimensions
     const dims = computeGameDimensions(gridSize);
     const { gameWidth, gameHeight, gridWidth, gridHeight, cellSize } = dims;
-
-    // Store them in the scene in case we need references
     this.gameWidth = gameWidth;
     this.gameHeight = gameHeight;
     this.gridWidth = gridWidth;
     this.gridHeight = gridHeight;
     this.cellSize = cellSize;
 
-    // Decide where the grid starts
+    // Position the grid
     const isMobile = window.innerWidth < 768;
     let startX = (gameWidth - gridWidth) / 2;
     let startY = isMobile ? 80 : 120;
 
-    // ---------- Add scoreboard texts ----------
+    // ---------- Scoreboard Text ----------
     if (isMobile) {
-      // Mobile scoreboard
       const scoreFontSize = Math.max(18, Math.floor(cellSize * 0.3));
       const smallFontSize = Math.max(16, Math.floor(cellSize * 0.25));
 
@@ -195,16 +189,16 @@ class MyScene extends Phaser.Scene {
         { font: '24px Arial', fill: '#000000' }
       ).setOrigin(0.5, 0).setDepth(9999);
     }
-    // ------------------------------------------
+    // -------------------------------------
 
-    // Create grid
+    // Create the grid
     const gridConfig = {
       gridSize,
       cellSize,
       margin: 5,
       startX,
       startY,
-      // Hard-coded 0 => no unsuitable farmland
+      // Hard-coded 0 => no 'unsuitable for agriculture'
       unsuitableProportion: 0,
       correlation: correlationVal,
       maxValue: 20,
@@ -212,7 +206,7 @@ class MyScene extends Phaser.Scene {
     };
     this.grid = createGrid(this, gridConfig);
 
-    // If computer is farmer, mark BAU
+    // If computer is farmer, define BAU
     if (this.computerTeam === 'farmer') {
       const farmerBAUSet = calculateFarmerBAUSet(this.grid, farmerClaims, this.computerStrategy, greenClaims);
       farmerBAUSet.forEach(coord => {
@@ -223,7 +217,7 @@ class MyScene extends Phaser.Scene {
       this.greenBAU = 0;
     }
 
-    // If user is green, pre-calc a near-optimal green reference
+    // If user is green, pre-calc heuristic
     if (userTeam === 'green') {
       this.heuristicMaxGreenScore = calculateHeuristicMaxGreenScore(
         this.grid, greenClaims, farmerClaims, this.leakage
@@ -284,137 +278,133 @@ class MyScene extends Phaser.Scene {
 }
 
 /**
- * Show final results in a simple full-screen overlay after clearing the old display.
+ * Completely destroys the Phaser game and replaces the entire web page with a 
+ * brand-new "results page" in plain HTML/JS.
  */
 export function displayFinalResults(scene) {
-  // Calculate final metrics
+  // 1) Calculate final metrics
   const optimalSW = calculateOptimalSocialWelfare(scene.grid);
   const actualSW = calculateActualSocialWelfare(scene.grid);
   const welfareLoss = calculateSocialWelfareDifference(actualSW, optimalSW);
+
   let additionalityVal = 'N/A';
   if (scene.userOptions.userTeam === 'green') {
     const greenClaimedTotal = calculateGreenClaimedTotal(scene.grid);
     additionalityVal = calculateAdditionality(greenClaimedTotal, scene.greenBAU).toString();
   }
-  
-  // Destroy all existing game objects (grid cells, scoreboard texts, etc.)
-  // This is the simplest approach: no leftover overlaps.
-  scene.children.removeAll(); 
-  
-  // Optionally reset camera background color
-  scene.cameras.main.setBackgroundColor(0xEDE8E1);
-  
-  // Dimensions
-  const width = scene.cameras.main.width;
-  const height = scene.cameras.main.height;
-  
-  // A full-screen rectangle for background
-  const overlay = scene.add.rectangle(
-    0, 0,
-    width, height,
-    0x6EA06E,
-    0.7
-  ).setOrigin(0,0).setDepth(9999);
 
-  // Title text
-  const headerFontSize = Math.floor(Math.max(24, width * 0.05));
-  const textFontSize = Math.max(20, Math.floor(width * 0.04));
-  let startY = 50;
-
-  scene.add.text(
-    width / 2, startY,
-    'Final Results',
-    { font: `${headerFontSize}px Arial`, fill: '#4D341A' }
-  ).setOrigin(0.5).setDepth(10000);
-  
-  startY += headerFontSize + 20;
-  
-  // Show the main stats
-  scene.add.text(
-    width / 2, startY,
-    `Green Score: ${scene.greenScore}`,
-    { font: `${textFontSize}px Arial`, fill: '#4D341A' }
-  ).setOrigin(0.5).setDepth(10000);
-  startY += textFontSize + 10;
-  
-  scene.add.text(
-    width / 2, startY,
-    `Farmer Score: ${scene.farmerScore}`,
-    { font: `${textFontSize}px Arial`, fill: '#4D341A' }
-  ).setOrigin(0.5).setDepth(10000);
-  startY += textFontSize + 10;
-  
-  if (scene.userOptions.userTeam === 'green') {
-    scene.add.text(
-      width / 2, startY,
-      `Additionality: ${additionalityVal}`,
-      { font: `${textFontSize}px Arial`, fill: '#4D341A' }
-    ).setOrigin(0.5).setDepth(10000);
-    startY += textFontSize + 10;
-  }
-  
-  scene.add.text(
-    width / 2, startY,
-    `Social Welfare Loss: ${welfareLoss.toFixed(2)}%`,
-    { font: `${textFontSize}px Arial`, fill: '#4D341A' }
-  ).setOrigin(0.5).setDepth(10000);
-  startY += textFontSize + 20;
-  
-  // If user was green, show "Green Success" fraction if known
+  // If userTeam=green, compute "Green Success" fraction
+  let greenSuccessFraction = null;
   if (scene.userOptions.userTeam === 'green' && scene.heuristicMaxGreenScore > 0) {
-    const fraction = (scene.greenScore / scene.heuristicMaxGreenScore) * 100;
-    scene.add.text(
-      width / 2, startY,
-      `Green Success: ${fraction.toFixed(1)}%`,
-      { font: `${textFontSize}px Arial`, fill: '#4D341A' }
-    ).setOrigin(0.5).setDepth(10000);
-    startY += textFontSize + 20;
+    greenSuccessFraction = (scene.greenScore / scene.heuristicMaxGreenScore) * 100;
   }
+
+  // 2) Destroy the Phaser game to remove the canvas from DOM
+  //    (This also stops all update loops, input, etc.)
+  const phaserGame = scene.game;
+  phaserGame.destroy(true, false);
+
+  // 3) Clear the entire HTML body
+  document.body.innerHTML = '';
+
+  // 4) Create a fresh "results" page layout in pure JS/HTML
+  const container = document.createElement('div');
+  container.style.position = 'absolute';
+  container.style.top = '0';
+  container.style.left = '0';
+  container.style.width = '100%';
+  container.style.height = '100%';
+  container.style.background = '#6EA06E';
+  container.style.color = '#4D341A';
+  container.style.display = 'flex';
+  container.style.flexDirection = 'column';
+  container.style.alignItems = 'center';
+  container.style.justifyContent = 'center';
+  container.style.fontFamily = 'Arial, sans-serif';
+  container.style.padding = '10px';
+
+  // Title
+  const title = document.createElement('h1');
+  title.textContent = 'Final Results';
+  container.appendChild(title);
+
+  // Basic stats
+  const statsArea = document.createElement('div');
+  statsArea.style.fontSize = '1.2em';
+  statsArea.style.textAlign = 'center';
+  statsArea.style.margin = '20px';
+
+  let greenLine = document.createElement('p');
+  greenLine.textContent = `Green Score: ${scene.greenScore}`;
+  statsArea.appendChild(greenLine);
+
+  let farmerLine = document.createElement('p');
+  farmerLine.textContent = `Farmer Score: ${scene.farmerScore}`;
+  statsArea.appendChild(farmerLine);
+
+  if (scene.userOptions.userTeam === 'green') {
+    let addLine = document.createElement('p');
+    addLine.textContent = `Additionality: ${additionalityVal}`;
+    statsArea.appendChild(addLine);
+  }
+
+  let welfareLine = document.createElement('p');
+  welfareLine.textContent = `Social Welfare Loss: ${welfareLoss.toFixed(2)}%`;
+  statsArea.appendChild(welfareLine);
+
+  if (greenSuccessFraction !== null) {
+    let successLine = document.createElement('p');
+    successLine.textContent = `Green Success: ${greenSuccessFraction.toFixed(1)}%`;
+    statsArea.appendChild(successLine);
+  }
+  container.appendChild(statsArea);
 
   // Buttons
-  const btnFontSize = Math.max(18, Math.floor(width * 0.04));
-  const spacing = 60;
+  const btnStyle = `
+    display: inline-block;
+    margin: 10px;
+    padding: 15px 25px;
+    border: none;
+    border-radius: 5px;
+    background-color: #228B22;
+    color: #ffffff;
+    font-size: 1em;
+    cursor: pointer;
+  `;
 
-  // Play Again
-  let playAgainBtn = scene.add.text(
-    width / 2, height - spacing - 60,
-    'Play Again',
-    {
-      font: `${btnFontSize}px Arial`,
-      fill: '#ffffff',
-      backgroundColor: '#228B22',
-      padding: { x: 12, y: 8 }
-    }
-  ).setOrigin(0.5).setDepth(10001).setInteractive();
+  const buttonArea = document.createElement('div');
 
-  playAgainBtn.on('pointerdown', () => {
-    scene.scene.restart();
-  });
-
-  // End & Exit
-  let exitBtn = scene.add.text(
-    width / 2, height - spacing,
-    'End & Exit',
-    {
-      font: `${btnFontSize}px Arial`,
-      fill: '#ffffff',
-      backgroundColor: '#228B22',
-      padding: { x: 12, y: 8 }
-    }
-  ).setOrigin(0.5).setDepth(10001).setInteractive();
-
-  exitBtn.on('pointerdown', () => {
+  const playAgainBtn = document.createElement('button');
+  playAgainBtn.textContent = 'Play Again';
+  playAgainBtn.style.cssText = btnStyle;
+  playAgainBtn.onclick = () => {
+    // Refresh the page or do some other logic to re-show the game
     window.location.reload();
-  });
+  };
+  buttonArea.appendChild(playAgainBtn);
+
+  const exitBtn = document.createElement('button');
+  exitBtn.textContent = 'End & Exit';
+  exitBtn.style.cssText = btnStyle;
+  exitBtn.onclick = () => {
+    // Just reload, or navigate away
+    window.location.href = 'about:blank';  // or any other page
+  };
+  buttonArea.appendChild(exitBtn);
+
+  container.appendChild(buttonArea);
+
+  // Add container to body
+  document.body.appendChild(container);
 }
 
 /**
- * Start the Phaser game (in "game" mode).
+ * Start the Phaser game in "game" mode.
  */
 export function startPhaserGame(userOptions) {
   const gridSize = parseInt(userOptions.gridSize, 10);
   const dims = computeGameDimensions(gridSize);
-  const { gameWidth, gameHeight, cellSize } = dims;
+  const { gameWidth, gameHeight } = dims;
 
   const config = {
     type: Phaser.AUTO,
@@ -430,9 +420,8 @@ export function startPhaserGame(userOptions) {
 
   const game = new Phaser.Game(config);
   game.scene.start('MyScene', {
-    ...userOptions,
-    gameWidth,
-    gameHeight,
-    cellSize
+    ...userOptions
+    // We don't strictly need to pass gameWidth, gameHeight, etc. 
+    // because computeGameDimensions is re-run in create().
   });
 }
