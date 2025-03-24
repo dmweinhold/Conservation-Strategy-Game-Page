@@ -207,7 +207,7 @@ function maybeEndGame(scene) {
 }
 
 // ---------- Initialization of the numeric grid ----------
-function initializeGrid(gridSize, correlation, unsuitableProportion, maxValue) {
+function initializeGrid(gridSize, unsuitableProportion, correlation, maxValue) {
   const numCells = gridSize * gridSize;
   const grid = [];
 
