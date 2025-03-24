@@ -18,10 +18,11 @@ export function createGrid(scene, config) {
     BAUSet = []
   } = config;
   
-  // Optionally store grid start Y and gridHeight for later use in pointerdown animations.
+  // Save grid start and height for later use in pointerdown animations.
   scene.userOptions.gridStartY = startY;
+  const computedGridHeight = gridSize * cellSize + (gridSize - 1) * margin;
+  scene.userOptions.gridHeight = computedGridHeight;
   
-  // Create the grid data
   const gridData = initializeGrid(gridSize, unsuitableProportion, correlation, maxValue);
   const cellValues = gridData.grid;
   let grid = [];
@@ -34,7 +35,6 @@ export function createGrid(scene, config) {
       const { ag, cons } = cellValues[row][col];
       const strokeColor = cons > ag ? 0x228B22 : cons < ag ? 0x654321 : 0xA9A9A9;
       
-      // Create the cell rectangle
       let cell = scene.add.rectangle(x, y, cellSize, cellSize, 0xffffff)
         .setOrigin(0, 0)
         .setStrokeStyle(2, strokeColor)
@@ -45,12 +45,10 @@ export function createGrid(scene, config) {
       cell.cellData = cellValues[row][col];
       cell.cellData.isBAU = BAUSet.some(coord => coord.row === row && coord.col === col);
       
-      // Add cell texts for environmental and agricultural values.
       let envText = scene.add.text(x + cellSize - 5, y + 5, cell.cellData.cons, {
         font: `${Math.floor(cellSize * 0.25)}px Arial`,
         fill: '#228B22'
       }).setOrigin(1, 0).setDepth(10);
-      
       let agText = scene.add.text(x + 5, y + cellSize - 5, cell.cellData.ag, {
         font: `${Math.floor(cellSize * 0.25)}px Arial`,
         fill: '#5C4033'
@@ -59,7 +57,6 @@ export function createGrid(scene, config) {
       cell.envText = envText;
       cell.agText = agText;
       
-      // Pointerdown handler for claiming a cell
       cell.on('pointerdown', () => {
         if (!cell.claimed) {
           const claimingTeam = scene.currentPlayer;
@@ -67,37 +64,24 @@ export function createGrid(scene, config) {
           scene.input.enabled = false;
           let movingIcon;
           
-          // If static sprite exists (desktop), use its coordinates
-          if (claimingTeam === 'green' && scene.staticTree) {
-            movingIcon = scene.add.image(scene.staticTree.x, scene.staticTree.y, 'tree')
-              .setDisplaySize(cellSize, cellSize);
-          } else if (claimingTeam === 'farmer' && scene.staticTractor) {
-            movingIcon = scene.add.image(scene.staticTractor.x, scene.staticTractor.y, 'tractor')
-              .setDisplaySize(cellSize, cellSize);
-          } else {
-            // For device mode (or if static sprite not available), spawn off-screen.
-            // Compute vertical band based on grid's vertical center.
-            const gridStartY = scene.userOptions.gridStartY; 
-            const gridHeight = scene.userOptions.gridHeight || (gridSize * cellSize + (gridSize - 1) * margin);
-            const gridCenterY = gridStartY + gridHeight / 2;
-            const bandFraction = 2 / 3;
-            const bandHeight = gridHeight * bandFraction;
-            const halfBand = bandHeight / 2;
-            const minY = gridCenterY - halfBand;
-            const maxY = gridCenterY + halfBand;
-            
-            if (claimingTeam === 'green') {
-              // Tree comes from the left.
-              movingIcon = scene.add.image(-cellSize, Phaser.Math.Between(minY, maxY), 'tree')
+          // On desktop (window.innerWidth >= 1024) use static sprites if available.
+          // On devices, always use the off-screen anchor approach.
+          if (window.innerWidth >= 1024) {
+            if (claimingTeam === 'green' && scene.staticTree) {
+              movingIcon = scene.add.image(scene.staticTree.x, scene.staticTree.y, 'tree')
+                .setDisplaySize(cellSize, cellSize);
+            } else if (claimingTeam === 'farmer' && scene.staticTractor) {
+              movingIcon = scene.add.image(scene.staticTractor.x, scene.staticTractor.y, 'tractor')
                 .setDisplaySize(cellSize, cellSize);
             } else {
-              // Tractor comes from the right.
-              movingIcon = scene.add.image(scene.gameWidth + cellSize, Phaser.Math.Between(minY, maxY), 'tractor')
-                .setDisplaySize(cellSize, cellSize);
+              // Fallback to off-screen if static sprites are missing.
+              movingIcon = getOffScreenSprite(scene, claimingTeam, cellSize, margin, gridSize);
             }
+          } else {
+            // For devices: use the off-screen anchor approach.
+            movingIcon = getOffScreenSprite(scene, claimingTeam, cellSize, margin, gridSize);
           }
           
-          // Tween the moving sprite to the cell's center.
           scene.tweens.add({
             targets: movingIcon,
             x: center.x,
@@ -171,8 +155,36 @@ export function createGrid(scene, config) {
 }
 
 /**
- * If the current player has 0 claims, switch immediately to the other side,
- * or if both are 0, call maybeEndGame.
+ * Returns a moving sprite (tree for green, tractor for farmer) starting off-screen,
+ * with its Y coordinate chosen randomly within a vertical band centered on the grid.
+ */
+function getOffScreenSprite(scene, claimingTeam, cellSize, margin, gridSize) {
+  // Retrieve grid starting Y and height from userOptions.
+  const gridStartY = scene.userOptions.gridStartY;
+  const gridHeight = scene.userOptions.gridHeight || (gridSize * cellSize + (gridSize - 1) * margin);
+  const gridCenterY = gridStartY + gridHeight / 2;
+  // Define a vertical band covering 2/3 of the grid height, centered on the grid.
+  const bandFraction = 2 / 3;
+  const bandHeight = gridHeight * bandFraction;
+  const halfBand = bandHeight / 2;
+  const minY = gridCenterY - halfBand;
+  const maxY = gridCenterY + halfBand;
+  
+  let startX, startY;
+  if (claimingTeam === 'green') {
+    startX = -cellSize;  // off-screen left
+    startY = Phaser.Math.Between(minY, maxY);
+  } else {
+    startX = scene.userOptions.gameWidth + cellSize;  // off-screen right
+    startY = Phaser.Math.Between(minY, maxY);
+  }
+  
+  const spriteKey = (claimingTeam === 'green') ? 'tree' : 'tractor';
+  return scene.add.image(startX, startY, spriteKey).setDisplaySize(cellSize, cellSize);
+}
+
+/**
+ * If the current player has 0 claims, switch to the other side or end the game.
  */
 function skipIfNoClaims(scene) {
   if (scene.currentPlayer === 'farmer' && scene.availFarmerClaims <= 0) {
@@ -193,10 +205,8 @@ function skipIfNoClaims(scene) {
 }
 
 /**
- * Check if the game should end:
- *  - if both sides are out of claims, OR
- *  - if there are no unclaimed cells left.
- * Then leftover => green => displacement, and call displayFinalResults.
+ * Check if the game should end (if both sides have no claims left or there are no unclaimed cells).
+ * Then, assign all leftover cells to green (displacement) and display final results.
  */
 function maybeEndGame(scene) {
   let anyUnclaimed = false;
@@ -210,7 +220,7 @@ function maybeEndGame(scene) {
     if (anyUnclaimed) break;
   }
   if ((scene.availFarmerClaims === 0 && scene.availGreenClaims === 0) || !anyUnclaimed) {
-    // Leftover cells are assigned to green (displacement)
+    // Assign any unclaimed cells to green.
     for (let row of scene.grid) {
       for (let cell of row) {
         if (!cell.claimed) {
@@ -228,15 +238,20 @@ function maybeEndGame(scene) {
     scene.greenScore = scene.greenPureScore + scene.greenDisplacementScore;
     scene.greenScoreText.setText(`Green Score: ${scene.greenScore}`);
     scene.farmerScoreText.setText(`Farmer Score: ${scene.farmerScore}`);
-    displayFinalResults(scene);
+    // For mobile, use the mobile final results display.
+    if (window.innerWidth < 1024) {
+      displayFinalResults(scene); // This function should now detect mobile mode and replace the page.
+    } else {
+      // Desktop version: show the overlay as before.
+      displayFinalResults(scene);
+    }
   }
 }
 
 /**
- * Initializes the numeric grid with values for agriculture and conservation.
+ * Initializes the numeric grid.
  */
 function initializeGrid(gridSize, unsuitableProportion, correlation, maxValue) {
-  const numCells = gridSize * gridSize;
   const grid = [];
   for (let i = 0; i < gridSize; i++) {
     const row = [];
@@ -251,13 +266,13 @@ function initializeGrid(gridSize, unsuitableProportion, correlation, maxValue) {
   return { grid };
 }
 
-// --- Helper Math Functions ---
+/* --- Helper Math Functions --- */
 function erf(x) {
   const sign = (x >= 0) ? 1 : -1;
   x = Math.abs(x);
   const a1 = 0.254829592, a2 = -0.284496736, a3 = 1.421413741, a4 = -1.453152027, a5 = 1.061405429, p = 0.3275911;
   const t = 1.0 / (1.0 + p * x);
-  const y = 1.0 - (((((a5 * t + a4) * t) + a3) * t + a2) * t + a1) * t * Math.exp(-x*x);
+  const y = 1.0 - (((((a5 * t + a4) * t) + a3) * t + a2) * t + a1) * t * Math.exp(-x * x);
   return sign * y;
 }
 
