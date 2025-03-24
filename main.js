@@ -221,146 +221,11 @@ class MyScene extends Phaser.Scene {
 }
 
 /**
- * Display final results.
- * If on a device (window.innerWidth < 1024), destroy the Phaser game and replace the page with an HTML results screen.
- * Otherwise, show an overlay as before.
+ * Revised displayFinalResults:
+ * Instead of destroying the game and reloading the page, this function creates an overlay
+ * that shows the final results and provides "Play Again" and "End & Exit" buttons.
  */
 export function displayFinalResults(scene) {
-  if (window.innerWidth < 1024) {
-    // Mobile final results:
-    const optimalSW = calculateOptimalSocialWelfare(scene.grid);
-    const actualSW  = calculateActualSocialWelfare(scene.grid);
-    const welfareLoss = calculateSocialWelfareDifference(actualSW, optimalSW);
-    let additionalityVal = 'N/A';
-    if (scene.userOptions.userTeam === 'green') {
-      const greenClaimedTotal = calculateGreenClaimedTotal(scene.grid);
-      additionalityVal = calculateAdditionality(greenClaimedTotal, scene.greenBAU).toString();
-    }
-    let greenSuccessFraction = null;
-    if (scene.userOptions.userTeam === 'green' && scene.heuristicMaxGreenScore > 0) {
-      greenSuccessFraction = (scene.greenScore / scene.heuristicMaxGreenScore) * 100;
-    }
-    // Save current game options for "Play Again"
-    localStorage.setItem('gameOptions', JSON.stringify(scene.userOptions));
-    // Destroy the game and clear the document.
-    scene.game.destroy(true, false);
-    document.body.innerHTML = '';
-    // Build an HTML results screen.
-    const container = document.createElement('div');
-    container.style.position = 'absolute';
-    container.style.top = '0';
-    container.style.left = '0';
-    container.style.width = '100%';
-    container.style.height = '100%';
-    container.style.background = '#6EA06E';
-    container.style.color = '#4D341A';
-    container.style.display = 'flex';
-    container.style.flexDirection = 'column';
-    container.style.alignItems = 'center';
-    container.style.justifyContent = 'center';
-    container.style.fontFamily = 'Arial, sans-serif';
-    container.style.padding = '10px';
-    
-    const title = document.createElement('h1');
-    title.textContent = 'Final Results';
-    container.appendChild(title);
-    
-    const statsArea = document.createElement('div');
-    statsArea.style.fontSize = '1.2em';
-    statsArea.style.textAlign = 'left';
-    statsArea.style.margin = '20px';
-    statsArea.style.width = '320px';
-    statsArea.style.padding = '10px';
-    
-    const metricsHeading = document.createElement('div');
-    metricsHeading.textContent = 'Metrics';
-    metricsHeading.style.fontSize = '1.4em';
-    metricsHeading.style.marginTop = '20px';
-    metricsHeading.style.fontWeight = 'bold';
-    metricsHeading.style.textAlign = 'left';
-    statsArea.appendChild(metricsHeading);
-    
-    const greenScoreLine = document.createElement('p');
-    greenScoreLine.textContent = `Green Score: ${scene.greenScore}`;
-    statsArea.appendChild(greenScoreLine);
-    
-    const pureLine = document.createElement('p');
-    pureLine.textContent = `  Pure Strategy: ${scene.greenPureScore}`;
-    pureLine.style.marginLeft = '25px';
-    statsArea.appendChild(pureLine);
-    
-    const dispLine = document.createElement('p');
-    dispLine.textContent = `  Displacement: ${scene.greenDisplacementScore}`;
-    dispLine.style.marginLeft = '25px';
-    statsArea.appendChild(dispLine);
-    
-    if (scene.userOptions.userTeam === 'green') {
-      const addLine = document.createElement('p');
-      addLine.textContent = `Additionality: ${additionalityVal}`;
-      statsArea.appendChild(addLine);
-    }
-    
-    const performanceHeading = document.createElement('div');
-    performanceHeading.textContent = 'Performance';
-    performanceHeading.style.fontSize = '1.4em';
-    performanceHeading.style.marginTop = '20px';
-    performanceHeading.style.fontWeight = 'bold';
-    performanceHeading.style.textAlign = 'left';
-    statsArea.appendChild(performanceHeading);
-    
-    const welfareLine = document.createElement('p');
-    welfareLine.textContent = `Social Welfare Loss (%): ${welfareLoss.toFixed(2)}%`;
-    statsArea.appendChild(welfareLine);
-    
-    if (greenSuccessFraction !== null) {
-      const successLine = document.createElement('p');
-      successLine.textContent = `Green Success (%): ${greenSuccessFraction.toFixed(1)}%`;
-      statsArea.appendChild(successLine);
-    }
-    
-    container.appendChild(statsArea);
-    
-    const btnStyle = `
-      display: inline-block;
-      margin: 10px;
-      padding: 15px 25px;
-      border: none;
-      border-radius: 5px;
-      background-color: #228B22;
-      color: #ffffff;
-      font-size: 1em;
-      cursor: pointer;
-    `;
-    
-    const buttonArea = document.createElement('div');
-    
-    const playAgainBtn = document.createElement('button');
-    playAgainBtn.textContent = 'Play Again';
-    playAgainBtn.style.cssText = btnStyle;
-    // Set auto-start flag so that when the landing page loads, it auto-starts the game.
-    playAgainBtn.onclick = () => {
-      localStorage.setItem('autoStartGame', 'true');
-      window.location.reload();
-    };
-    buttonArea.appendChild(playAgainBtn);
-    
-    const exitBtn = document.createElement('button');
-    exitBtn.textContent = 'End & Exit';
-    exitBtn.style.cssText = btnStyle;
-    // Clear stored game options so that the landing page appears.
-    exitBtn.onclick = () => {
-      localStorage.removeItem('autoStartGame');
-      localStorage.removeItem('gameOptions');
-      window.location.reload();
-    };
-    buttonArea.appendChild(exitBtn);
-    
-    container.appendChild(buttonArea);
-    document.body.appendChild(container);
-    return;
-  }
-  
-  // Desktop final results overlay (unchanged from before)
   const userTeam = scene.userOptions.userTeam || 'farmer';
   const optimalSW = calculateOptimalSocialWelfare(scene.grid);
   const actualSW  = calculateActualSocialWelfare(scene.grid);
@@ -370,40 +235,101 @@ export function displayFinalResults(scene) {
     const greenClaimedTotal = calculateGreenClaimedTotal(scene.grid);
     additionalityVal = calculateAdditionality(greenClaimedTotal, scene.greenBAU).toString();
   }
-  const lastRow = scene.grid[scene.grid.length - 1];
-  const gridBottom = lastRow[0].y + lastRow[0].height;
-  const offset = 50;
-  const resultsY = gridBottom + offset;
-  let bg = scene.add.rectangle(scene.cameras.main.centerX, resultsY, 850, 290, 0x6EA06E, 0.7);
-  bg.setOrigin(0.5, 0);
-  const leftColX = bg.x - 390;
-  const rightColX = bg.x + 100;
-  scene.add.text(leftColX, bg.y + 20, 'Final Metrics:', { font: '32px Arial', fill: '#4D341A' });
-  const colStartY = bg.y + 80;
-  const lineSpacing = 40;
-  scene.add.text(leftColX, colStartY, `Green Conservation Score: ${scene.greenScore}`, { font: '28px Arial', fill: '#4D341A' });
-  scene.add.text(leftColX + 20, colStartY + lineSpacing, `Pure Strategy: ${scene.greenPureScore}`, { font: '24px Arial', fill: '#4D341A' });
-  scene.add.text(leftColX + 20, colStartY + 2 * lineSpacing, `Displacement: ${scene.greenDisplacementScore}`, { font: '24px Arial', fill: '#4D341A' });
-  scene.add.text(leftColX, colStartY + 3 * lineSpacing, `Additionality: ${additionalityVal}`, { font: '28px Arial', fill: '#4D341A' });
-  scene.add.text(rightColX, bg.y + 20, 'Performance:', { font: '32px Arial', fill: '#4D341A' });
-  scene.add.text(rightColX, colStartY, `Welfare Loss: ${welfareLoss.toFixed(2)}%`, { font: '28px Arial', fill: '#4D341A' });
-  if (userTeam === 'green' && scene.heuristicMaxGreenScore && scene.heuristicMaxGreenScore > 0) {
-    const fraction = (scene.greenScore / scene.heuristicMaxGreenScore) * 100;
-    scene.add.text(rightColX, colStartY + lineSpacing, `Green Success: ${fraction.toFixed(1)}%`, { font: '28px Arial', fill: '#4D341A' });
-  }
+  
+  // Create a semi-transparent overlay container.
+  const overlay = document.createElement('div');
+  overlay.style.position = 'absolute';
+  overlay.style.top = '0';
+  overlay.style.left = '0';
+  overlay.style.width = '100%';
+  overlay.style.height = '100%';
+  overlay.style.background = 'rgba(110, 160, 110, 0.9)'; // semi-transparent green
+  overlay.style.color = '#4D341A';
+  overlay.style.display = 'flex';
+  overlay.style.flexDirection = 'column';
+  overlay.style.alignItems = 'center';
+  overlay.style.justifyContent = 'center';
+  overlay.style.fontFamily = 'Arial, sans-serif';
+  overlay.style.padding = '10px';
+  overlay.style.zIndex = '1000';
+
+  // Title
+  const title = document.createElement('h1');
+  title.textContent = 'Final Results';
+  overlay.appendChild(title);
+
+  // Metrics
+  const metricsDiv = document.createElement('div');
+  metricsDiv.style.fontSize = '1.2em';
+  metricsDiv.style.textAlign = 'center';
+  metricsDiv.style.margin = '20px';
+  metricsDiv.innerHTML = `
+    <p>Green Score: ${scene.greenScore}</p>
+    <p>Pure Strategy: ${scene.greenPureScore}</p>
+    <p>Displacement: ${scene.greenDisplacementScore}</p>
+    ${userTeam === 'green' ? `<p>Additionality: ${additionalityVal}</p>` : ''}
+    <p>Social Welfare Loss (%): ${welfareLoss.toFixed(2)}%</p>
+    ${ (userTeam === 'green' && scene.heuristicMaxGreenScore && scene.heuristicMaxGreenScore > 0) ? `<p>Green Success: ${((scene.greenScore / scene.heuristicMaxGreenScore)*100).toFixed(1)}%</p>` : '' }
+  `;
+  overlay.appendChild(metricsDiv);
+
+  // Buttons container
+  const buttonContainer = document.createElement('div');
+  buttonContainer.style.display = 'flex';
+  buttonContainer.style.justifyContent = 'center';
+  
+  const btnStyle = `
+    display: inline-block;
+    margin: 10px;
+    padding: 15px 25px;
+    border: none;
+    border-radius: 5px;
+    background-color: #228B22;
+    color: #ffffff;
+    font-size: 1em;
+    cursor: pointer;
+  `;
+
+  // "Play Again" button
+  const playAgainBtn = document.createElement('button');
+  playAgainBtn.textContent = 'Play Again';
+  playAgainBtn.style.cssText = btnStyle;
+  playAgainBtn.onclick = () => {
+      overlay.remove();
+      // Restart the current scene.
+      scene.scene.restart();
+  };
+  buttonContainer.appendChild(playAgainBtn);
+
+  // "End & Exit" button
+  const exitBtn = document.createElement('button');
+  exitBtn.textContent = 'End & Exit';
+  exitBtn.style.cssText = btnStyle;
+  exitBtn.onclick = () => {
+      overlay.remove();
+      // Instead of reloading the page, toggle the UI back to the landing page.
+      // If a global function exists to do this, call it; otherwise, perform a simple toggle.
+      const landingPage = document.getElementById('landing-page');
+      const gameUI = document.getElementById('game-ui');
+      if (landingPage && gameUI) {
+          gameUI.style.display = 'none';
+          landingPage.style.display = 'block';
+      }
+      // Optionally, you could also destroy the Phaser game instance:
+      // scene.game.destroy(true, false);
+  };
+  buttonContainer.appendChild(exitBtn);
+
+  overlay.appendChild(buttonContainer);
+  document.body.appendChild(overlay);
+
+  // Re-enable scene input, if necessary.
   scene.input.enabled = true;
-  let playAgainBtn = scene.add.text(bg.x - 150, bg.y + 340, 'Play Again', { font: '28px Arial', fill: '#ffffff', backgroundColor: '#228B22', padding: { x: 10, y: 5 } }).setInteractive();
-  playAgainBtn.setDepth(100);
-  playAgainBtn.on('pointerdown', () => {
-    scene.scene.restart();
-  });
-  let exitBtn = scene.add.text(bg.x + 50, bg.y + 340, 'End & Exit', { font: '28px Arial', fill: '#ffffff', backgroundColor: '#228B22', padding: { x: 10, y: 5 } }).setInteractive();
-  exitBtn.setDepth(100);
-  exitBtn.on('pointerdown', () => {
-    window.location.reload();
-  });
 }
 
+/**
+ * startPhaserGame: Initializes and starts the Phaser game.
+ */
 export function startPhaserGame(userOptions) {
   const { gridSize } = userOptions;
   const dims = computeGameDimensions(gridSize);

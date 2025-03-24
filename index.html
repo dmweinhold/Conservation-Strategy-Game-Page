@@ -11,7 +11,11 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="Conservation Game">
   <link rel="apple-touch-icon" href="images/icon-192.png">
+  
+  <!-- Phaser -->
   <script src="https://cdn.jsdelivr.net/npm/phaser@3/dist/phaser.js"></script>
+  
+  <!-- Styles (merged from both versions) -->
   <style>
     html, body {
       margin: 0;
@@ -90,7 +94,6 @@
       #landing-page h2 {
         font-size: 20px;
       }
-      /* Hide decorative elements for mobile */
       .decorative {
         display: none;
       }
@@ -98,6 +101,7 @@
   </style>
 </head>
 <body>
+  <!-- Landing Page -->
   <div id="landing-page">
     <img src="images/title_cover.png" alt="Game Title" style="max-width: 30%; height: auto; margin-bottom: 30px;" />
     <h2>Welcome to the Conservation Strategy Game!</h2>
@@ -114,39 +118,71 @@
     </p>
     <footer>&copy; Diana Weinhold 2025, All Rights Reserved</footer>
   </div>
+
+  <!-- Game UI -->
   <div id="game-ui" style="display: none;">
     <div id="ui-container"></div>
     <div id="terrain-wrapper">
       <img src="images/terrain.png" alt="Terrain" style="max-width: 50%; height: auto;" />
     </div>
     <div id="game-container"></div>
+    <!-- Game control buttons -->
+    <div id="game-controls" style="text-align: center; margin-top: 20px;">
+      <button id="playAgainBtn" type="button">Play Again</button>
+      <button id="exitBtn" type="button">Exit</button>
+    </div>
   </div>
-  <!-- Load modules -->
+
+  <!-- Game modules -->
   <script type="module" src="UserInput.js"></script>
   <script type="module" src="grid.js"></script>
   <script type="module" src="strategy.js"></script>
   <script type="module" src="gameLogic.js"></script>
   <script type="module" src="main.js"></script>
-  <!-- Service Worker registration -->
+
+  <!-- Service Worker Registration -->
   <script>
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/service-worker.js')
         .then(() => console.log('✅ Service Worker registered'))
         .catch(err => console.error('❌ Service Worker registration failed:', err));
     }
+
+    // "Play Game" button: hide landing page and show game UI
     document.getElementById('startButton').addEventListener('click', function () {
       document.getElementById('landing-page').style.display = 'none';
       document.getElementById('game-ui').style.display = 'block';
+      // Optionally start the Phaser game:
+      // startPhaserGame();
+    });
+
+    // "Play Again" button: reset game without reloading the page.
+    document.getElementById('playAgainBtn').addEventListener('click', function () {
+      // Call your game reset function; for example:
+      if (typeof resetGame === 'function') {
+        resetGame();
+      } else if (typeof startPhaserGame === 'function') {
+        startPhaserGame();
+      }
+    });
+
+    // "Exit" button: return to the landing page.
+    document.getElementById('exitBtn').addEventListener('click', function () {
+      // Optional: perform any cleanup or stop game logic here.
+      document.getElementById('game-ui').style.display = 'none';
+      document.getElementById('landing-page').style.display = 'block';
     });
   </script>
-  <!-- Auto-start logic -->
+
+  <!-- Auto-start logic for PWA: skip landing page if flag set -->
   <script type="module">
     import { startPhaserGame } from './main.js';
     window.addEventListener('load', () => {
       if (localStorage.getItem('autoStartGame') === 'true') {
         const options = JSON.parse(localStorage.getItem('gameOptions'));
         localStorage.removeItem('autoStartGame'); // clear the flag
-        // Remove landing page entirely so only game UI remains.
+        
+        // Remove landing page entirely
         const landingPage = document.getElementById('landing-page');
         if (landingPage) {
           landingPage.remove();
@@ -158,4 +194,3 @@
   </script>
 </body>
 </html>
-
