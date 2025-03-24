@@ -7,6 +7,7 @@ import { displayFinalResults } from './main.js';
  * Creates an interactive grid of cells and returns it as a 2D array (grid[row][col]).
  */
 // grid.js
+// grid.js
 export function createGrid(scene, config) {
   const {
     gridSize,
@@ -19,7 +20,6 @@ export function createGrid(scene, config) {
     maxValue = 20,
     BAUSet = []
   } = config;
-
   const gridData = initializeGrid(gridSize, unsuitableProportion, correlation, maxValue);
   const cellValues = gridData.grid;
   let grid = [];
@@ -39,8 +39,6 @@ export function createGrid(scene, config) {
       cell.col = col;
       cell.cellData = cellValues[row][col];
       cell.cellData.isBAU = BAUSet.some(coord => coord.row === row && coord.col === col);
-      
-      // Use cellSize-based font for the cell's texts.
       let envText = scene.add.text(x + cellSize - 5, y + 5, cell.cellData.cons, {
         font: `${Math.floor(cellSize * 0.25)}px Arial`,
         fill: '#228B22'
@@ -49,17 +47,15 @@ export function createGrid(scene, config) {
         font: `${Math.floor(cellSize * 0.25)}px Arial`,
         fill: '#5C4033'
       }).setOrigin(0, 1).setDepth(10);
-      
       cell.envText = envText;
       cell.agText = agText;
-      
       cell.on('pointerdown', () => {
         if (!cell.claimed) {
           const claimingTeam = scene.currentPlayer;
           const center = cell.getCenter();
           scene.input.enabled = false;
           let movingIcon;
-          // If static images aren’t available (mobile), just animate from the cell center.
+          // For mobile, use the center if static images are not available.
           if (claimingTeam === 'green') {
             movingIcon = scene.add.image(scene.staticTree ? scene.staticTree.x : center.x, scene.staticTree ? scene.staticTree.y : center.y, 'tree')
               .setDisplaySize(cellSize, cellSize);
@@ -95,10 +91,10 @@ export function createGrid(scene, config) {
                 scene.farmerScore += cell.cellData.ag;
                 scene.availFarmerClaims = Math.max(0, scene.availFarmerClaims - 1);
               }
-              if (scene.farmerScoreText) scene.farmerScoreText.setText(`Farmer Score: ${scene.farmerScore}`);
-              if (scene.greenScoreText) scene.greenScoreText.setText(`Green Score: ${scene.greenScore}`);
-              if (scene.farmerClaimsText) scene.farmerClaimsText.setText(`Farmer Claims: ${scene.availFarmerClaims}`);
-              if (scene.greenClaimsText) scene.greenClaimsText.setText(`Green Claims: ${scene.availGreenClaims}`);
+              if (scene.farmerScoreText) scene.farmerScoreText.setText(`Farmer: ${scene.farmerScore}`);
+              if (scene.greenScoreText) scene.greenScoreText.setText(`Green: ${scene.greenScore}`);
+              if (scene.farmerClaimsText) scene.farmerClaimsText.setText(`Claims: ${scene.availFarmerClaims}`);
+              if (scene.greenClaimsText) scene.greenClaimsText.setText(`Claims: ${scene.availGreenClaims}`);
               cell.claimed = true;
               cell.cellData.owner = claimingTeam;
               cell.envText.setColor('#ffffff');
@@ -132,6 +128,9 @@ export function createGrid(scene, config) {
   }
   return grid;
 }
+
+// (Assume helper functions like initializeGrid, skipIfNoClaims, and maybeEndGame are included.)
+
 
 /**
  * If the current player has 0 claims, switch immediately to the other side,

@@ -5,16 +5,9 @@ const uiContainer = document.getElementById('ui-container');
 
 function buildUI() {
   const isMobile = window.innerWidth < 768;
-  // Adjust UI container style for mobile.
-  if (isMobile) {
-    uiContainer.style.width = '95%';
-    uiContainer.style.fontSize = '16px';
-    uiContainer.style.padding = '8px';
-  } else {
-    uiContainer.style.width = '300px';
-    uiContainer.style.fontSize = '16px';
-    uiContainer.style.padding = '10px';
-  }
+  uiContainer.style.width = isMobile ? '95%' : '300px';
+  uiContainer.style.fontSize = isMobile ? '16px' : '16px';
+  uiContainer.style.padding = isMobile ? '8px' : '10px';
 
   const heading = document.createElement('h3');
   heading.innerText = 'Game Setup';
@@ -24,7 +17,6 @@ function buildUI() {
   const sideLabel = document.createElement('label');
   sideLabel.innerText = 'Which side do you want to play? ';
   uiContainer.appendChild(sideLabel);
-
   const sideSelect = document.createElement('select');
   sideSelect.id = 'humanSide';
   ['farmer', 'green'].forEach(side => {
@@ -42,7 +34,6 @@ function buildUI() {
   const compStratLabel = document.createElement('label');
   compStratLabel.innerText = 'Computer Strategy: ';
   uiContainer.appendChild(compStratLabel);
-
   const compStratSelect = document.createElement('select');
   compStratSelect.id = 'computerStrategy';
   uiContainer.appendChild(compStratSelect);
@@ -53,7 +44,6 @@ function buildUI() {
   const corrLabel = document.createElement('label');
   corrLabel.innerText = 'Correlation (-1 to 1): ';
   uiContainer.appendChild(corrLabel);
-
   const corrInput = document.createElement('input');
   corrInput.id = 'correlation';
   corrInput.type = 'number';
@@ -69,7 +59,6 @@ function buildUI() {
   const leakLabel = document.createElement('label');
   leakLabel.innerText = 'Leakage: ';
   uiContainer.appendChild(leakLabel);
-
   const leakSelect = document.createElement('select');
   leakSelect.id = 'leakage';
   ['1','0.5','0'].forEach(val => {
@@ -87,7 +76,6 @@ function buildUI() {
   const gridSizeLabel = document.createElement('label');
   gridSizeLabel.innerText = 'Grid Size (4,6,8,10): ';
   uiContainer.appendChild(gridSizeLabel);
-
   const gridSizeSelect = document.createElement('select');
   gridSizeSelect.id = 'gridSize';
   [4, 6, 8, 10].forEach(size => {
@@ -104,7 +92,6 @@ function buildUI() {
   const fClaimsLabel = document.createElement('label');
   fClaimsLabel.innerText = 'Farmer Claims: ';
   uiContainer.appendChild(fClaimsLabel);
-
   const fClaimsSelect = document.createElement('select');
   fClaimsSelect.id = 'farmerClaims';
   uiContainer.appendChild(fClaimsSelect);
@@ -115,7 +102,6 @@ function buildUI() {
   const gClaimsLabel = document.createElement('label');
   gClaimsLabel.innerText = 'Green Claims: ';
   uiContainer.appendChild(gClaimsLabel);
-
   const gClaimsDisplay = document.createElement('input');
   gClaimsDisplay.id = 'greenClaims';
   gClaimsDisplay.type = 'number';
@@ -157,15 +143,7 @@ function buildUI() {
     const gridSize = gridSizeSelect.value;
     uiContainer.style.display = 'none';
     document.getElementById('terrain-wrapper').style.display = 'none';
-    startPhaserGame({
-      userTeam,
-      computerStrategy,
-      correlation,
-      leakage,
-      farmerClaims,
-      greenClaims,
-      gridSize
-    });
+    startPhaserGame({ userTeam, computerStrategy, correlation, leakage, farmerClaims, greenClaims, gridSize });
   };
   uiContainer.appendChild(startBtn);
 
