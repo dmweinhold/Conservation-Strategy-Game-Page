@@ -6,6 +6,7 @@ import { displayFinalResults } from './main.js';
 /**
  * Creates an interactive grid of cells and returns it as a 2D array (grid[row][col]).
  */
+// grid.js
 export function createGrid(scene, config) {
   const {
     gridSize,
@@ -19,158 +20,96 @@ export function createGrid(scene, config) {
     BAUSet = []
   } = config;
 
-  // 1) Generate the numeric data for each cell
   const gridData = initializeGrid(gridSize, unsuitableProportion, correlation, maxValue);
-  const cellValues = gridData.grid; // a 2D array of { ag, cons, owner: '' }
-
+  const cellValues = gridData.grid;
   let grid = [];
-
-  // 2) Build interactive rectangles
   for (let row = 0; row < gridSize; row++) {
     grid[row] = [];
     for (let col = 0; col < gridSize; col++) {
       const x = startX + col * (cellSize + margin);
       const y = startY + row * (cellSize + margin);
-
-      // Determine stroke color based on cons vs. ag
       const { ag, cons } = cellValues[row][col];
-      let strokeColor;
-      if (cons > ag) {
-        strokeColor = 0x228B22; // green
-      } else if (cons < ag) {
-        strokeColor = 0x654321; // brown
-      } else {
-        strokeColor = 0xA9A9A9; // grey if tie
-      }
-
-      // Create the clickable rectangle with the chosen stroke color
+      const strokeColor = cons > ag ? 0x228B22 : cons < ag ? 0x654321 : 0xA9A9A9;
       let cell = scene.add.rectangle(x, y, cellSize, cellSize, 0xffffff)
         .setOrigin(0, 0)
         .setStrokeStyle(2, strokeColor)
         .setInteractive();
-
-      // Attach custom data to the cell
       cell.claimed = false;
       cell.row = row;
       cell.col = col;
       cell.cellData = cellValues[row][col];
-
-      // Mark BAU if in config.BAUSet
       cell.cellData.isBAU = BAUSet.some(coord => coord.row === row && coord.col === col);
-
-      // Add text for environmental value in the top-right
+      
+      // Use cellSize-based font for the cell's texts.
       let envText = scene.add.text(x + cellSize - 5, y + 5, cell.cellData.cons, {
-        font: '24px Arial',
-        fill: '#228B22' // greenish
-      })
-      .setOrigin(1, 0)
-      .setDepth(10);
-
-      // Add text for agricultural value in the bottom-left
+        font: `${Math.floor(cellSize * 0.25)}px Arial`,
+        fill: '#228B22'
+      }).setOrigin(1, 0).setDepth(10);
       let agText = scene.add.text(x + 5, y + cellSize - 5, cell.cellData.ag, {
-        font: '24px Arial',
-        fill: '#5C4033' // brownish
-      })
-      .setOrigin(0, 1)
-      .setDepth(10);
-
+        font: `${Math.floor(cellSize * 0.25)}px Arial`,
+        fill: '#5C4033'
+      }).setOrigin(0, 1).setDepth(10);
+      
       cell.envText = envText;
       cell.agText = agText;
-
-      // 3) On pointerdown
+      
       cell.on('pointerdown', () => {
         if (!cell.claimed) {
-          let claimingTeam = scene.currentPlayer;
-          let center = cell.getCenter();
-          scene.input.enabled = false; // disable input during animation
-
-          // Animate icon from the tree or tractor
+          const claimingTeam = scene.currentPlayer;
+          const center = cell.getCenter();
+          scene.input.enabled = false;
           let movingIcon;
+          // If static images aren’t available (mobile), just animate from the cell center.
           if (claimingTeam === 'green') {
-            movingIcon = scene.add
-              .image(scene.staticTree.x, scene.staticTree.y, 'tree')
+            movingIcon = scene.add.image(scene.staticTree ? scene.staticTree.x : center.x, scene.staticTree ? scene.staticTree.y : center.y, 'tree')
               .setDisplaySize(cellSize, cellSize);
           } else {
-            movingIcon = scene.add
-              .image(scene.staticTractor.x, scene.staticTractor.y, 'tractor')
+            movingIcon = scene.add.image(scene.staticTractor ? scene.staticTractor.x : center.x, scene.staticTractor ? scene.staticTractor.y : center.y, 'tractor')
               .setDisplaySize(cellSize, cellSize);
           }
-
-          // Tween from the static icon to the cell center
           scene.tweens.add({
             targets: movingIcon,
             x: center.x,
             y: center.y,
             duration: 600,
             onComplete: () => {
-              // Remove the moving icon
               movingIcon.destroy();
-
-              // Place the final sprite (e.g. green1..green10 or farmer1..10)
-              let randomIndex = Phaser.Math.Between(1, 10);
-              let claimKey = (claimingTeam === 'green')
-                ? 'green' + randomIndex
-                : 'farmer' + randomIndex;
-
-              scene.add.image(center.x, center.y, claimKey)
-                   .setDisplaySize(cell.width, cell.height);
-
-              // Re-enable input by default
+              const randomIndex = Phaser.Math.Between(1, 10);
+              const claimKey = claimingTeam === 'green' ? 'green' + randomIndex : 'farmer' + randomIndex;
+              scene.add.image(center.x, center.y, claimKey).setDisplaySize(cellSize, cellSize);
               scene.input.enabled = true;
-
-              // 4) Update scores/claims
               if (claimingTeam === 'green') {
-                // "Active" green claim => greenPureScore
                 scene.greenPureScore += cell.cellData.cons;
-
-                // If cell is in BAU, partial penalty might reduce farmer claims
                 if (cell.cellData.isBAU) {
                   scene.cumGreenBAU = (scene.cumGreenBAU || 0) + 1;
-                  let requiredDeduction = Math.floor(
-                    scene.cumGreenBAU * (1 - scene.leakage)
-                  );
+                  const requiredDeduction = Math.floor(scene.cumGreenBAU * (1 - scene.leakage));
                   if (requiredDeduction > scene.cumFarmerDeduction) {
-                    let diff = requiredDeduction - scene.cumFarmerDeduction;
+                    const diff = requiredDeduction - scene.cumFarmerDeduction;
                     scene.availFarmerClaims = Math.max(0, scene.availFarmerClaims - diff);
                     scene.cumFarmerDeduction += diff;
                   }
                 }
-
                 scene.greenScore = scene.greenPureScore + scene.greenDisplacementScore;
                 scene.availGreenClaims = Math.max(0, scene.availGreenClaims - 1);
-
               } else {
-                // Farmer claims
                 scene.farmerScore += cell.cellData.ag;
                 scene.availFarmerClaims = Math.max(0, scene.availFarmerClaims - 1);
               }
-
-              // Update scoreboard text
-              scene.farmerScoreText.setText(`Farmer Score: ${scene.farmerScore}`);
-              scene.greenScoreText.setText(`Green Score: ${scene.greenScore}`);
-              scene.farmerClaimsText.setText(`Farmer Claims: ${scene.availFarmerClaims}`);
-              scene.greenClaimsText.setText(`Green Claims: ${scene.availGreenClaims}`);
-
-              // Mark the cell as claimed
+              if (scene.farmerScoreText) scene.farmerScoreText.setText(`Farmer Score: ${scene.farmerScore}`);
+              if (scene.greenScoreText) scene.greenScoreText.setText(`Green Score: ${scene.greenScore}`);
+              if (scene.farmerClaimsText) scene.farmerClaimsText.setText(`Farmer Claims: ${scene.availFarmerClaims}`);
+              if (scene.greenClaimsText) scene.greenClaimsText.setText(`Green Claims: ${scene.availGreenClaims}`);
               cell.claimed = true;
               cell.cellData.owner = claimingTeam;
               cell.envText.setColor('#ffffff');
               cell.agText.setColor('#ffffff');
-
-              // 5) Switch turns
-              scene.currentPlayer = (claimingTeam === 'green') ? 'farmer' : 'green';
+              scene.currentPlayer = claimingTeam === 'green' ? 'farmer' : 'green';
               scene.updateTurnText();
-
-              // 6) Possibly skip if new currentPlayer has no claims
               skipIfNoClaims(scene);
-
-              // 7) If AI turn
               if (scene.currentPlayer === scene.computerTeam) {
                 scene.input.enabled = false;
                 scene.time.delayedCall(500, () => {
-                  const claimParam = (scene.currentPlayer === 'green')
-                    ? scene.availGreenClaims
-                    : scene.availFarmerClaims;
+                  const claimParam = scene.currentPlayer === 'green' ? scene.availGreenClaims : scene.availFarmerClaims;
                   const move = computerChoosePlot(scene.computerStrategy, scene.grid, claimParam);
                   if (move) {
                     scene.grid[move.row][move.col].emit('pointerdown');
@@ -180,23 +119,17 @@ export function createGrid(scene, config) {
                   }
                 });
               } else {
-                // If it's the human's turn, re-enable
                 scene.input.enabled = true;
                 maybeEndGame(scene);
               }
             }
           });
-
-          // Mark the cell as claimed so we do not double-click in the same cycle
           cell.claimed = true;
         }
       });
-
-      // Store the cell in the grid array
       grid[row][col] = cell;
     }
   }
-
   return grid;
 }
 
