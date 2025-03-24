@@ -284,8 +284,8 @@ class MyScene extends Phaser.Scene {
  * brand-new "results" page in plain HTML/JS, now also showing "pure" and 
  * "displacement" (if the user is Green).
  */
+// ✅ Final updated displayFinalResults function with left-aligned subheadings
 export function displayFinalResults(scene) {
-  // 1) Calculate final metrics
   const optimalSW = calculateOptimalSocialWelfare(scene.grid);
   const actualSW = calculateActualSocialWelfare(scene.grid);
   const welfareLoss = calculateSocialWelfareDifference(actualSW, optimalSW);
@@ -296,20 +296,16 @@ export function displayFinalResults(scene) {
     additionalityVal = calculateAdditionality(greenClaimedTotal, scene.greenBAU).toString();
   }
 
-  // If userTeam=green, compute "Green Success" fraction
   let greenSuccessFraction = null;
   if (scene.userOptions.userTeam === 'green' && scene.heuristicMaxGreenScore > 0) {
     greenSuccessFraction = (scene.greenScore / scene.heuristicMaxGreenScore) * 100;
   }
 
-  // 2) Destroy the Phaser game to remove the canvas from DOM
   const phaserGame = scene.game;
   phaserGame.destroy(true, false);
 
-  // 3) Clear the entire HTML body
   document.body.innerHTML = '';
 
-  // 4) Create a fresh "results" page layout in pure JS/HTML
   const container = document.createElement('div');
   container.style.position = 'absolute';
   container.style.top = '0';
@@ -325,34 +321,29 @@ export function displayFinalResults(scene) {
   container.style.fontFamily = 'Arial, sans-serif';
   container.style.padding = '10px';
 
-  // Title
   const title = document.createElement('h1');
   title.textContent = 'Final Results';
   container.appendChild(title);
 
-  // Basic stats
   const statsArea = document.createElement('div');
   statsArea.style.fontSize = '1.2em';
-  statsArea.style.textAlign = 'left';       // ⬅️ make text left-justified
+  statsArea.style.textAlign = 'left';
   statsArea.style.margin = '20px';
-  statsArea.style.width = '320px';          // ⬅️ fixed width keeps the column centered
+  statsArea.style.width = '320px';
   statsArea.style.padding = '10px';
 
-
-  // Subheading: Metrics
   const metricsHeading = document.createElement('div');
   metricsHeading.textContent = 'Metrics';
   metricsHeading.style.fontSize = '1.4em';
   metricsHeading.style.marginTop = '20px';
   metricsHeading.style.fontWeight = 'bold';
-  container.appendChild(metricsHeading);
+  metricsHeading.style.textAlign = 'left';
+  statsArea.appendChild(metricsHeading);
 
-  // Green Score
   const greenScoreLine = document.createElement('p');
   greenScoreLine.textContent = `Green Score: ${scene.greenScore}`;
   statsArea.appendChild(greenScoreLine);
 
-  // Indented lines for pure & displacement (if user side is green or if you always want to show)
   const pureLine = document.createElement('p');
   pureLine.textContent = `  Pure Strategy: ${scene.greenPureScore}`;
   pureLine.style.marginLeft = '25px';
@@ -363,36 +354,32 @@ export function displayFinalResults(scene) {
   dispLine.style.marginLeft = '25px';
   statsArea.appendChild(dispLine);
 
-  // Additionality (if userTeam=green)
   if (scene.userOptions.userTeam === 'green') {
     let addLine = document.createElement('p');
     addLine.textContent = `Additionality: ${additionalityVal}`;
     statsArea.appendChild(addLine);
   }
 
-
-  // Subheading: Performance
   const performanceHeading = document.createElement('div');
   performanceHeading.textContent = 'Performance';
   performanceHeading.style.fontSize = '1.4em';
   performanceHeading.style.marginTop = '20px';
   performanceHeading.style.fontWeight = 'bold';
-  container.appendChild(performanceHeading);
+  performanceHeading.style.textAlign = 'left';
+  statsArea.appendChild(performanceHeading);
 
-  // Welfare Loss
   let welfareLine = document.createElement('p');
   welfareLine.textContent = `Social Welfare Loss (%): ${welfareLoss.toFixed(2)}%`;
   statsArea.appendChild(welfareLine);
 
-  // Green Success
   if (greenSuccessFraction !== null) {
     let successLine = document.createElement('p');
     successLine.textContent = `Green Success (%): ${greenSuccessFraction.toFixed(1)}%`;
     statsArea.appendChild(successLine);
   }
+
   container.appendChild(statsArea);
 
-  // Buttons
   const btnStyle = `
     display: inline-block;
     margin: 10px;
@@ -411,7 +398,6 @@ export function displayFinalResults(scene) {
   playAgainBtn.textContent = 'Play Again';
   playAgainBtn.style.cssText = btnStyle;
   playAgainBtn.onclick = () => {
-    // Refresh the page or do some other logic to re-show the game
     window.location.reload();
   };
   buttonArea.appendChild(playAgainBtn);
@@ -420,14 +406,11 @@ export function displayFinalResults(scene) {
   exitBtn.textContent = 'End & Exit';
   exitBtn.style.cssText = btnStyle;
   exitBtn.onclick = () => {
-    // Just reload, or navigate away
-    window.location.href = 'about:blank';  // or any other page
+    window.location.href = 'about:blank';
   };
   buttonArea.appendChild(exitBtn);
 
   container.appendChild(buttonArea);
-
-  // Add container to body
   document.body.appendChild(container);
 }
 
