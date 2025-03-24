@@ -207,7 +207,7 @@ function maybeEndGame(scene) {
 }
 
 // ---------- Initialization of the numeric grid ----------
-function initializeGrid(gridSize, unsuitableProportion, correlation, maxValue) {
+function initializeGrid(gridSize, correlation, maxValue) {
   const numCells = gridSize * gridSize;
   const grid = [];
 
@@ -222,24 +222,9 @@ function initializeGrid(gridSize, unsuitableProportion, correlation, maxValue) {
     grid.push(row);
   }
 
-  if (unsuitableProportion > 0) {
-    let count = Math.round((unsuitableProportion / 100) * numCells);
-    if (count >= numCells) count = numCells - 1;
-    if (count > 0) {
-      let indices = Array.from({ length: numCells }, (_, i) => i);
-      indices = shuffleArray(indices);
-      const chosen = indices.slice(0, count);
-      chosen.forEach(index => {
-        const r = Math.floor(index / gridSize);
-        const c = index % gridSize;
-        grid[r][c].ag = -grid[r][c].ag;
-      });
-    }
-  }
-
-  console.log('Final initialized grid:', grid);
   return { grid };
 }
+
 
 // Helper math
 function erf(x) {
