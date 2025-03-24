@@ -18,22 +18,23 @@ import {
  * and how large the grid is, given user-selected gridSize.
  */
 function computeGameDimensions(gridSize, cellSize = 100, margin = 5) {
-  // Basic grid dimensions in pixels
   const gridWidth  = gridSize * cellSize + (gridSize - 1) * margin;
   const gridHeight = gridSize * cellSize + (gridSize - 1) * margin;
 
-  // We’ll define minimum game dimensions, plus extra space for overlays
+  // Minimum dimensions
   const minWidth  = 1024;
   const minHeight = 900;
 
-  // Adjust these to add more or less margins around the grid
-  const extraSide   = 500; 
-  const extraTop    = 150; 
+  const extraSide   = 500;
+  const extraTop    = 150;
   const extraBottom = 450;
 
-  // Final game dimension must fit grid plus side/ top / bottom
-  const gameWidth  = Math.max(minWidth,  gridWidth  + extraSide);
-  const gameHeight = Math.max(minHeight, gridHeight + extraTop + extraBottom);
+  // Detect window height to prevent overflow on mobile
+  const screenHeight = window.innerHeight;
+  const screenWidth = window.innerWidth;
+
+  const gameWidth  = Math.max(minWidth, gridWidth + extraSide, screenWidth);
+  const gameHeight = Math.min(screenHeight, Math.max(minHeight, gridHeight + extraTop + extraBottom));
 
   return { gameWidth, gameHeight, gridWidth, gridHeight };
 }
@@ -380,6 +381,7 @@ export function displayFinalResults(scene) {
     console.log("End & Exit clicked");
     window.location.reload();
   });
+  window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
 }
 
 
