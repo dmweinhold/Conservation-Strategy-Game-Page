@@ -95,8 +95,10 @@ class MyScene extends Phaser.Scene {
     // Initialize scores/claims
     this.greenScore = 0;
     this.farmerScore = 0;
+    // We'll track "pure" vs. "displacement" for Greens
     this.greenPureScore = 0;
     this.greenDisplacementScore = 0;
+
     this.availFarmerClaims = farmerClaims;
     this.availGreenClaims = greenClaims;
     this.cumGreenBAU = 0;
@@ -278,8 +280,9 @@ class MyScene extends Phaser.Scene {
 }
 
 /**
- * Completely destroys the Phaser game and replaces the entire web page with a 
- * brand-new "results page" in plain HTML/JS.
+ * Completely destroys the Phaser game and replaces the entire page with a 
+ * brand-new "results" page in plain HTML/JS, now also showing "pure" and 
+ * "displacement" (if the user is Green).
  */
 export function displayFinalResults(scene) {
   // 1) Calculate final metrics
@@ -300,7 +303,6 @@ export function displayFinalResults(scene) {
   }
 
   // 2) Destroy the Phaser game to remove the canvas from DOM
-  //    (This also stops all update loops, input, etc.)
   const phaserGame = scene.game;
   phaserGame.destroy(true, false);
 
@@ -334,24 +336,40 @@ export function displayFinalResults(scene) {
   statsArea.style.textAlign = 'center';
   statsArea.style.margin = '20px';
 
-  let greenLine = document.createElement('p');
-  greenLine.textContent = `Green Score: ${scene.greenScore}`;
-  statsArea.appendChild(greenLine);
+  // Green Score
+  const greenScoreLine = document.createElement('p');
+  greenScoreLine.textContent = `Green Score: ${scene.greenScore}`;
+  statsArea.appendChild(greenScoreLine);
 
-  let farmerLine = document.createElement('p');
+  // Indented lines for pure & displacement (if user side is green or if you always want to show)
+  const pureLine = document.createElement('p');
+  pureLine.textContent = `  Pure: ${scene.greenPureScore}`;
+  pureLine.style.marginLeft = '25px';
+  statsArea.appendChild(pureLine);
+
+  const dispLine = document.createElement('p');
+  dispLine.textContent = `  Displacement: ${scene.greenDisplacementScore}`;
+  dispLine.style.marginLeft = '25px';
+  statsArea.appendChild(dispLine);
+
+  // Farmer Score
+  const farmerLine = document.createElement('p');
   farmerLine.textContent = `Farmer Score: ${scene.farmerScore}`;
   statsArea.appendChild(farmerLine);
 
+  // Additionality (if userTeam=green)
   if (scene.userOptions.userTeam === 'green') {
     let addLine = document.createElement('p');
     addLine.textContent = `Additionality: ${additionalityVal}`;
     statsArea.appendChild(addLine);
   }
 
+  // Welfare Loss
   let welfareLine = document.createElement('p');
   welfareLine.textContent = `Social Welfare Loss: ${welfareLoss.toFixed(2)}%`;
   statsArea.appendChild(welfareLine);
 
+  // Green Success
   if (greenSuccessFraction !== null) {
     let successLine = document.createElement('p');
     successLine.textContent = `Green Success: ${greenSuccessFraction.toFixed(1)}%`;
