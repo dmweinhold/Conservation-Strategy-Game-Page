@@ -145,7 +145,7 @@
     window.addEventListener('load', () => {
       if (localStorage.getItem('autoStartGame') === 'true') {
         const options = JSON.parse(localStorage.getItem('gameOptions'));
-        localStorage.removeItem('autoStartGame');
+        localStorage.removeItem('autoStartGame'); // clear flag so it doesn't loop
         document.getElementById('landing-page').style.display = 'none';
         document.getElementById('game-ui').style.display = 'block';
         startPhaserGame(options);

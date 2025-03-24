@@ -1,4 +1,4 @@
-const CACHE_NAME = 'conservation-game-v1.0.6'; // bump this when you push new updates
+const CACHE_NAME = 'conservation-game-v1.0.7'; // bump this when you push new updates
 
 const urlsToCache = [
   '/',
