@@ -19,9 +19,7 @@ import {
  */
 function computeGameDimensions(gridSize, baseCellSize = 100, margin = 5) {
   const isMobile = window.innerWidth < 768;
-
-  // Use smaller cell size on mobile to compress the grid
-  const cellSize = isMobile ? 70 : baseCellSize;
+  const cellSize = isMobile ? 70 : baseCellSize; // dynamically set cell size
 
   const gridWidth  = gridSize * cellSize + (gridSize - 1) * margin;
   const gridHeight = gridSize * cellSize + (gridSize - 1) * margin;
@@ -36,9 +34,8 @@ function computeGameDimensions(gridSize, baseCellSize = 100, margin = 5) {
   const gameWidth  = Math.max(gridWidth + extraSide, screenWidth);
   const gameHeight = Math.min(screenHeight, gridHeight + extraTop + extraBottom);
 
-  return { gameWidth, gameHeight, gridWidth, gridHeight };
+  return { gameWidth, gameHeight, gridWidth, gridHeight, cellSize };
 }
-
 
 /**
  * Phaser scene class.
@@ -76,8 +73,14 @@ class MyScene extends Phaser.Scene {
       gameWidth,
       gameHeight,
       gridWidth,
-      gridHeight
+      gridHeight,
+      cellSize
     } = this.userOptions;
+
+    // Define helper variables for responsive UI elements
+    const isMobile = window.innerWidth < 768;
+    const paddingY = gameHeight * 0.05;
+    const scoreFontSize = isMobile ? 20 : 24;
 
     // 2) Basic defaults and constraints
     this.currentPlayer = 'farmer';  // farmer goes first by definition
@@ -132,10 +135,10 @@ class MyScene extends Phaser.Scene {
     this.cumFarmerDeduction = 0;
 
     // 6) Place scoreboard text near corners
-    const farmerScoreStyle   = { font: '24px Arial', fill: '#654321' };
-    const greenScoreStyle    = { font: '24px Arial', fill: '#228B22' };
-    const claimsStyleFarmer  = { font: '20px Arial', fill: '#654321' };
-    const claimsStyleGreen   = { font: '20px Arial', fill: '#228B22' };
+    const farmerScoreStyle   = { font: `${scoreFontSize}px Arial`, fill: '#654321' };
+    const greenScoreStyle    = { font: `${scoreFontSize}px Arial`, fill: '#228B22' };
+    const claimsStyleFarmer  = { font: `${scoreFontSize * 0.83}px Arial`, fill: '#654321' };
+    const claimsStyleGreen   = { font: `${scoreFontSize * 0.83}px Arial`, fill: '#228B22' };
 
     this.farmerScoreText = this.add.text(
       gameWidth - 220, 60,
@@ -162,32 +165,33 @@ class MyScene extends Phaser.Scene {
     );
 
     // 7) "Current Turn" text in center near top
+    const turnOffsetY = paddingY + (scoreFontSize + 20);
     this.turnText = this.add.text(
       gameWidth / 2,
-      30,
+      turnOffsetY,
       `Current Turn: ${this.currentPlayer}`,
-      { font: '24px Arial', fill: '#ffffff' }
+      { font: `${scoreFontSize}px Arial`, fill: '#ffffff' }
     ).setOrigin(0.5, 0);
 
     this.updateTurnText();
 
     // 8) Create the grid
     let startX = (gameWidth - gridWidth) / 2;
-    let startY = 120;
+    let startY = 120; // You could also compute this relative to gameHeight if desired
 
     const gridConfig = {
       gridSize,
-      cellSize: 100,
+      cellSize,  // Now using the dynamically computed cellSize
       margin: 5,
       startX,
       startY,
       unsuitableProportion: 0,
       correlation: correlationVal,
       maxValue: 20,
-      BAUSet: [] // We'll assign BAU after grid creation if necessary
+      BAUSet: []
     };
 
-    this.grid = createGrid(this, gridConfig);
+    this.grid = createGrid(this, gridConfig);  // (Ensure only one call here)
 
     // 9) If computer is farmer => define BAU
     if (this.computerTeam === 'farmer') {
@@ -202,14 +206,11 @@ class MyScene extends Phaser.Scene {
       });
       this.greenBAU = calculateGreenBAUScore(this.grid, farmerBAUSet);
     } else {
-      // If user is farmer => no BAU
       this.greenBAU = 0;
     }
 
     // 10) Possibly compute the theoretical max green score
-    // ONLY if the userTeam is green do we care.
     if (userTeam === 'green') {
-      // We'll store it on the scene so we can use in final display
       const farmerClaimsOriginal = parseInt(farmerClaims, 10);
       const greenClaimsOriginal  = parseInt(greenClaims, 10);
       this.heuristicMaxGreenScore = calculateHeuristicMaxGreenScore(
@@ -223,17 +224,20 @@ class MyScene extends Phaser.Scene {
     }
 
     // 11) Place static images (tree, tractor)
+    const treeOffset = isMobile ? 70 : 130;
+    const tractorOffset = isMobile ? 70 : 130;
+
     this.staticTree = this.add.image(
-      startX - 130,
+      startX - treeOffset,
       startY + gridHeight / 2,
       'tree'
-    ).setDisplaySize(100, 100);
+    ).setDisplaySize(cellSize, cellSize);
 
     this.staticTractor = this.add.image(
-      startX + gridWidth + 130,
+      startX + gridWidth + tractorOffset,
       startY + gridHeight / 2,
       'tractor'
-    ).setDisplaySize(100, 100);
+    ).setDisplaySize(cellSize, cellSize);
 
     // 12) If AI starts, do the first move
     if (this.currentPlayer === this.computerTeam) {
@@ -250,7 +254,6 @@ class MyScene extends Phaser.Scene {
         }
       });
     } else {
-      // Otherwise, user goes first
       this.input.enabled = true;
     }
   }
@@ -288,78 +291,94 @@ export function displayFinalResults(scene) {
     additionalityVal = calculateAdditionality(greenClaimedTotal, scene.greenBAU).toString();
   }
 
-  // 1) Position overlay below bottom row of grid
+  // Retrieve dynamic dimensions passed from startPhaserGame
+  const gameWidth = scene.userOptions.gameWidth;
+  const gameHeight = scene.userOptions.gameHeight;
+  const cellSize = scene.userOptions.cellSize;
+
   const lastRow = scene.grid[scene.grid.length - 1];
   const gridBottom = lastRow[0].y + lastRow[0].height;
-  const offset = 50;
-  const resultsY = gridBottom + offset;
+  const overlayOffset = cellSize * 0.5; // offset relative to cell size
+  const resultsY = gridBottom + overlayOffset;
 
-  // 2) Create a wider rectangle so we can have two columns
+  // Define overlay dimensions based on the game width and cell size
+  const overlayWidth = gameWidth * 0.8;
+  const overlayHeight = cellSize * 3.0; // adjust multiplier as needed
+  const overlayX = scene.cameras.main.centerX;
+  
+  // Create the overlay background rectangle
   let bg = scene.add.rectangle(
-    scene.cameras.main.centerX, // horizontally center
-    resultsY,                   // y position
-    850,                        // width (increased for 2 columns)
-    290,                        // height
-    0x6EA06E,                   // fill color
-    0.7                         // alpha
-  );
-  bg.setOrigin(0.5, 0);
+    overlayX,
+    resultsY,
+    overlayWidth,
+    overlayHeight,
+    0x6EA06E,
+    0.7
+  ).setOrigin(0.5, 0);
 
-  // 4) Define two column anchors
-  const leftColX = bg.x - 390;
-  const rightColX = bg.x + 100;
+  // Define column anchors relative to the overlay width
+  const leftColX = bg.x - overlayWidth * 0.45;
+  const rightColX = bg.x + overlayWidth * 0.1;
 
-  // 3) Title in the center near the top of the rectangle
-  scene.add.text(leftColX, bg.y + 20, 'Final Metrics:', {
-    font: '32px Arial',
+  // Set dynamic font sizes relative to cellSize
+  const headerFontSize = cellSize * 0.35;
+  const textFontSize = cellSize * 0.25;
+
+  // Title for the left column
+  scene.add.text(leftColX, bg.y + overlayHeight * 0.07, 'Final Metrics:', {
+    font: `${headerFontSize}px Arial`,
     fill: '#4D341A'
   });
 
-  // Start Y for the columns (further down from the title)
-  const colStartY = bg.y + 80;
-  const lineSpacing = 40; // vertical spacing between lines
+  // Starting Y for the columns within the overlay and line spacing
+  const colStartY = bg.y + overlayHeight * 0.3;
+  const lineSpacing = cellSize * 0.8;
 
-  // 5) Left column items
+  // Left column items (Final Metrics)
   scene.add.text(leftColX, colStartY, 
     `Green Conservation Score: ${scene.greenScore}`,
-    { font: '28px Arial', fill: '#4D341A' }
+    { font: `${textFontSize}px Arial`, fill: '#4D341A' }
   );
-  scene.add.text(leftColX + 20, colStartY + lineSpacing, 
+  scene.add.text(leftColX + cellSize * 0.2, colStartY + lineSpacing, 
     `Pure Strategy: ${scene.greenPureScore}`,
-    { font: '24px Arial', fill: '#4D341A' }
+    { font: `${textFontSize}px Arial`, fill: '#4D341A' }
   );
-  scene.add.text(leftColX + 20, colStartY + 2 * lineSpacing,
+  scene.add.text(leftColX + cellSize * 0.2, colStartY + 2 * lineSpacing,
     `Displacement: ${scene.greenDisplacementScore}`,
-    { font: '24px Arial', fill: '#4D341A' }
+    { font: `${textFontSize}px Arial`, fill: '#4D341A' }
   );
   scene.add.text(leftColX, colStartY + 3 * lineSpacing,
     `Additionality: ${additionalityVal}`,
-    { font: '28px Arial', fill: '#4D341A' }
+    { font: `${textFontSize}px Arial`, fill: '#4D341A' }
   );
 
-  // 6) Right column items
-  scene.add.text(rightColX, bg.y + 20, 'Performance:', {
-    font: '32px Arial',
+  // Right column items (Performance metrics)
+  scene.add.text(rightColX, bg.y + overlayHeight * 0.07, 'Performance:', {
+    font: `${headerFontSize}px Arial`,
     fill: '#4D341A'
   });
   scene.add.text(rightColX, colStartY, 
     `Welfare Loss: ${welfareLoss.toFixed(2)}%`,
-    { font: '28px Arial', fill: '#4D341A' }
+    { font: `${textFontSize}px Arial`, fill: '#4D341A' }
   );
   if (userTeam === 'green' && scene.heuristicMaxGreenScore && scene.heuristicMaxGreenScore > 0) {
     const fraction = (scene.greenScore / scene.heuristicMaxGreenScore) * 100;
     scene.add.text(rightColX, colStartY + lineSpacing,
       `Green Success: ${fraction.toFixed(1)}%`,
-      { font: '28px Arial', fill: '#4D341A' }
+      { font: `${textFontSize}px Arial`, fill: '#4D341A' }
     );
   }
 
-  // Ensure input is enabled for button interactions
+  // Re-enable input for further interactions
   scene.input.enabled = true;
 
-  // Create "Play Again" button
-  let playAgainBtn = scene.add.text(bg.x - 150, bg.y + 340, 'Play Again', {
-    font: '28px Arial',
+  // Create interactive buttons relative to the overlay position
+  const btnY = bg.y + overlayHeight + cellSize * 0.5;
+  const btnFontSize = cellSize * 0.3;
+
+  // "Play Again" button
+  let playAgainBtn = scene.add.text(bg.x - overlayWidth * 0.2, btnY, 'Play Again', {
+    font: `${btnFontSize}px Arial`,
     fill: '#ffffff',
     backgroundColor: '#228B22',
     padding: { x: 10, y: 5 }
@@ -370,9 +389,9 @@ export function displayFinalResults(scene) {
     scene.scene.restart();
   });
 
-  // Create "End & Exit" button
-  let exitBtn = scene.add.text(bg.x + 50, bg.y + 340, 'End & Exit', {
-    font: '28px Arial',
+  // "End & Exit" button
+  let exitBtn = scene.add.text(bg.x + overlayWidth * 0.1, btnY, 'End & Exit', {
+    font: `${btnFontSize}px Arial`,
     fill: '#ffffff',
     backgroundColor: '#228B22',
     padding: { x: 10, y: 5 }
@@ -382,10 +401,9 @@ export function displayFinalResults(scene) {
     console.log("End & Exit clicked");
     window.location.reload();
   });
+  
   window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
 }
-
-
 
 /**
  * Start the Phaser game with dynamically computed dimensions.
@@ -394,15 +412,18 @@ export function startPhaserGame(userOptions) {
   // 1) read gridSize from user input
   const { gridSize } = userOptions;
 
-  // 2) compute final game + grid dims
-  const { gameWidth, gameHeight, gridWidth, gridHeight } =
-    computeGameDimensions(gridSize);
+  // 2) compute final game + grid dimensions, including cellSize
+  const { gameWidth, gameHeight, gridWidth, gridHeight, cellSize } = computeGameDimensions(gridSize);
 
-  // 3) build the Phaser config
+  // 3) build the Phaser config with scale options for responsiveness
   const config = {
     type: Phaser.AUTO,
     width: gameWidth,
     height: gameHeight,
+    scale: {
+      mode: Phaser.Scale.FIT,             // scales the game to fit the screen
+      autoCenter: Phaser.Scale.CENTER_BOTH  // centers the game on the page
+    },
     scene: [ MyScene ],
     parent: 'game-container'
   };
@@ -410,12 +431,13 @@ export function startPhaserGame(userOptions) {
   // 4) create the game
   const game = new Phaser.Game(config);
 
-  // 5) pass all data (including computed widths/heights) to the scene
+  // 5) pass all data (including computed dimensions) to the scene
   game.scene.start('MyScene', {
     ...userOptions,
     gameWidth,
     gameHeight,
     gridWidth,
-    gridHeight
+    gridHeight,
+    cellSize
   });
 }
