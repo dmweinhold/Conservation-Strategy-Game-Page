@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <title>Conservation Strategy Game</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="theme-color" content="#6EA06E">
   <link rel="manifest" href="manifest.json">
   <!-- iOS PWA Support -->
@@ -105,7 +105,7 @@
     <button id="startButton" type="button">Play Game</button>
     <br><br>
     <a href="images/Conservation_Game_UserManual.pdf" target="_blank" rel="noopener noreferrer"
-      style="display: inline-block; background-color: #4D341A; color: white; padding: 12px 24px; border-radius: 5px; text-decoration: none; margin-top: 80px;">
+       style="display: inline-block; background-color: #4D341A; color: white; padding: 12px 24px; border-radius: 5px; text-decoration: none; margin-top: 80px;">
       📘 Download User Manual
     </a>
     <button id="installAppBtn" type="button" style="display: none;">📲 Install App for device or offline use</button>
@@ -121,11 +121,13 @@
     </div>
     <div id="game-container"></div>
   </div>
+  <!-- Load modules -->
   <script type="module" src="UserInput.js"></script>
   <script type="module" src="grid.js"></script>
   <script type="module" src="strategy.js"></script>
   <script type="module" src="gameLogic.js"></script>
   <script type="module" src="main.js"></script>
+  <!-- Service Worker registration -->
   <script>
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/service-worker.js')
@@ -136,25 +138,20 @@
       document.getElementById('landing-page').style.display = 'none';
       document.getElementById('game-ui').style.display = 'block';
     });
-    let deferredPrompt;
-    window.addEventListener('beforeinstallprompt', (e) => {
-      e.preventDefault();
-      deferredPrompt = e;
-      const installBtn = document.getElementById('installAppBtn');
-      installBtn.style.display = 'inline-block';
-      installBtn.addEventListener('click', () => {
-        installBtn.style.display = 'none';
-        deferredPrompt.prompt();
-        deferredPrompt.userChoice.then((choiceResult) => {
-          if (choiceResult.outcome === 'accepted') {
-            console.log('✅ User accepted the install prompt');
-          } else {
-            console.log('ℹ️ User dismissed the install prompt');
-          }
-          deferredPrompt = null;
-        });
-      });
+  </script>
+  <!-- Auto-start logic as a module -->
+  <script type="module">
+    import { startPhaserGame } from './main.js';
+    window.addEventListener('load', () => {
+      if (localStorage.getItem('autoStartGame') === 'true') {
+        const options = JSON.parse(localStorage.getItem('gameOptions'));
+        localStorage.removeItem('autoStartGame');
+        document.getElementById('landing-page').style.display = 'none';
+        document.getElementById('game-ui').style.display = 'block';
+        startPhaserGame(options);
+      }
     });
   </script>
 </body>
 </html>
+

@@ -228,7 +228,7 @@ class MyScene extends Phaser.Scene {
  */
 export function displayFinalResults(scene) {
   if (window.innerWidth < 1024) {
-    // Mobile results display: Destroy the game and build a new HTML page.
+    // Mobile results display: destroy the game and build a new HTML results page.
     const optimalSW = calculateOptimalSocialWelfare(scene.grid);
     const actualSW  = calculateActualSocialWelfare(scene.grid);
     const welfareLoss = calculateSocialWelfareDifference(actualSW, optimalSW);
@@ -241,9 +241,13 @@ export function displayFinalResults(scene) {
     if (scene.userOptions.userTeam === 'green' && scene.heuristicMaxGreenScore > 0) {
       greenSuccessFraction = (scene.greenScore / scene.heuristicMaxGreenScore) * 100;
     }
+    // Store the current game options so that "Play Again" can use them.
+    localStorage.setItem('gameOptions', JSON.stringify(scene.userOptions));
     // Destroy the Phaser game.
     scene.game.destroy(true, false);
+    // Clear the current document.
     document.body.innerHTML = '';
+    // Create a container for the results.
     const container = document.createElement('div');
     container.style.position = 'absolute';
     container.style.top = '0';
@@ -335,13 +339,22 @@ export function displayFinalResults(scene) {
     const playAgainBtn = document.createElement('button');
     playAgainBtn.textContent = 'Play Again';
     playAgainBtn.style.cssText = btnStyle;
-    playAgainBtn.onclick = () => { window.location.reload(); };
+    // "Play Again" saves an auto-start flag so the landing page immediately launches the game.
+    playAgainBtn.onclick = () => {
+      localStorage.setItem('autoStartGame', 'true');
+      window.location.reload();
+    };
     buttonArea.appendChild(playAgainBtn);
     
     const exitBtn = document.createElement('button');
     exitBtn.textContent = 'End & Exit';
     exitBtn.style.cssText = btnStyle;
-    exitBtn.onclick = () => { window.location.href = 'about:blank'; };
+    // "End & Exit" clears the auto-start flag, returning the user to the landing page.
+    exitBtn.onclick = () => {
+      localStorage.removeItem('autoStartGame');
+      localStorage.removeItem('gameOptions');
+      window.location.reload();
+    };
     buttonArea.appendChild(exitBtn);
     
     container.appendChild(buttonArea);
@@ -349,6 +362,67 @@ export function displayFinalResults(scene) {
     return;
   }
   
+  // Desktop: Show overlay as before.
+  const userTeam = scene.userOptions.userTeam || 'farmer';
+  const optimalSW = calculateOptimalSocialWelfare(scene.grid);
+  const actualSW  = calculateActualSocialWelfare(scene.grid);
+  const welfareLoss = calculateSocialWelfareDifference(actualSW, optimalSW);
+  let additionalityVal = 'N/A';
+  if (userTeam === 'green') {
+    const greenClaimedTotal = calculateGreenClaimedTotal(scene.grid);
+    additionalityVal = calculateAdditionality(greenClaimedTotal, scene.greenBAU).toString();
+  }
+  const lastRow = scene.grid[scene.grid.length - 1];
+  const gridBottom = lastRow[0].y + lastRow[0].height;
+  const offset = 50;
+  const resultsY = gridBottom + offset;
+  let bg = scene.add.rectangle(scene.cameras.main.centerX, resultsY, 850, 290, 0x6EA06E, 0.7);
+  bg.setOrigin(0.5, 0);
+  const leftColX = bg.x - 390;
+  const rightColX = bg.x + 100;
+  scene.add.text(leftColX, bg.y + 20, 'Final Metrics:', { font: '32px Arial', fill: '#4D341A' });
+  const colStartY = bg.y + 80;
+  const lineSpacing = 40;
+  scene.add.text(leftColX, colStartY, `Green Conservation Score: ${scene.greenScore}`, { font: '28px Arial', fill: '#4D341A' });
+  scene.add.text(leftColX + 20, colStartY + lineSpacing, `Pure Strategy: ${scene.greenPureScore}`, { font: '24px Arial', fill: '#4D341A' });
+  scene.add.text(leftColX + 20, colStartY + 2 * lineSpacing, `Displacement: ${scene.greenDisplacementScore}`, { font: '24px Arial', fill: '#4D341A' });
+  scene.add.text(leftColX, colStartY + 3 * lineSpacing, `Additionality: ${additionalityVal}`, { font: '28px Arial', fill: '#4D341A' });
+  scene.add.text(rightColX, bg.y + 20, 'Performance:', { font: '32px Arial', fill: '#4D341A' });
+  scene.add.text(rightColX, colStartY, `Welfare Loss: ${welfareLoss.toFixed(2)}%`, { font: '28px Arial', fill: '#4D341A' });
+  if (userTeam === 'green' && scene.heuristicMaxGreenScore && scene.heuristicMaxGreenScore > 0) {
+    const fraction = (scene.greenScore / scene.heuristicMaxGreenScore) * 100;
+    scene.add.text(rightColX, colStartY + lineSpacing, `Green Success: ${fraction.toFixed(1)}%`, { font: '28px Arial', fill: '#4D341A' });
+  }
+  scene.input.enabled = true;
+  let playAgainBtn = scene.add.text(bg.x - 150, bg.y + 340, 'Play Again', { font: '28px Arial', fill: '#ffffff', backgroundColor: '#228B22', padding: { x: 10, y: 5 } }).setInteractive();
+  playAgainBtn.setDepth(100);
+  playAgainBtn.on('pointerdown', () => {
+    scene.scene.restart();
+  });
+  let exitBtn = scene.add.text(bg.x + 50, bg.y + 340, 'End & Exit', { font: '28px Arial', fill: '#ffffff', backgroundColor: '#228B22', padding: { x: 10, y: 5 } }).setInteractive();
+  exitBtn.setDepth(100);
+  exitBtn.on('pointerdown', () => {
+    window.location.reload();
+  });
+}
+
+export function startPhaserGame(userOptions) {
+  const { gridSize } = userOptions;
+  const dims = computeGameDimensions(gridSize);
+  const { gameWidth, gameHeight, gridWidth, gridHeight } = dims;
+  const config = {
+    type: Phaser.AUTO,
+    width: gameWidth,
+    height: gameHeight,
+    scene: [ MyScene ],
+    parent: 'game-container'
+  };
+  const game = new Phaser.Game(config);
+  game.scene.start('MyScene', { ...userOptions, gameWidth, gameHeight, gridWidth, gridHeight });
+}
+
+
+
   // Desktop: Show overlay as before.
   const userTeam = scene.userOptions.userTeam || 'farmer';
   const optimalSW = calculateOptimalSocialWelfare(scene.grid);
