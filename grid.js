@@ -2,9 +2,6 @@
 import { computerChoosePlot } from './strategy.js';
 import { displayFinalResults } from './main.js';
 
-/**
- * Creates an interactive grid of cells and returns it as a 2D array (grid[row][col]).
- */
 export function createGrid(scene, config) {
   const {
     gridSize,
@@ -18,54 +15,61 @@ export function createGrid(scene, config) {
     BAUSet = []
   } = config;
   
-  // Save grid start and height for later use in pointerdown animations.
+  // We'll track these so we can do off-screen sprite animations if desired
   scene.userOptions.gridStartY = startY;
   const computedGridHeight = gridSize * cellSize + (gridSize - 1) * margin;
   scene.userOptions.gridHeight = computedGridHeight;
-  
-  const gridData = initializeGrid(gridSize, unsuitableProportion, correlation, maxValue);
+
+  const gridData   = initializeGrid(gridSize, unsuitableProportion, correlation, maxValue);
   const cellValues = gridData.grid;
   let grid = [];
-  
+
   for (let row = 0; row < gridSize; row++) {
     grid[row] = [];
     for (let col = 0; col < gridSize; col++) {
       const x = startX + col * (cellSize + margin);
       const y = startY + row * (cellSize + margin);
       const { ag, cons } = cellValues[row][col];
-      const strokeColor = cons > ag ? 0x228B22 : cons < ag ? 0x654321 : 0xA9A9A9;
-      
+      const strokeColor  = cons > ag ? 0x228B22 
+                          : cons < ag ? 0x654321 : 0xA9A9A9;
+
       let cell = scene.add.rectangle(x, y, cellSize, cellSize, 0xffffff)
         .setOrigin(0, 0)
         .setStrokeStyle(2, strokeColor)
         .setInteractive();
-      cell.claimed = false;
-      cell.row = row;
-      cell.col = col;
+
+      cell.claimed  = false;
+      cell.row      = row;
+      cell.col      = col;
       cell.cellData = cellValues[row][col];
-      cell.cellData.isBAU = BAUSet.some(coord => coord.row === row && coord.col === col);
-      
-      let envText = scene.add.text(x + cellSize - 5, y + 5, cell.cellData.cons, {
-        font: `${Math.floor(cellSize * 0.25)}px Arial`,
-        fill: '#228B22'
-      }).setOrigin(1, 0).setDepth(10);
-      let agText = scene.add.text(x + 5, y + cellSize - 5, cell.cellData.ag, {
-        font: `${Math.floor(cellSize * 0.25)}px Arial`,
-        fill: '#5C4033'
-      }).setOrigin(0, 1).setDepth(10);
-      
+      cell.cellData.isBAU = BAUSet.some(c => c.row === row && c.col === col);
+
+      let envText = scene.add.text(
+        x + cellSize - 5,
+        y + 5,
+        cell.cellData.cons,
+        { font: `${Math.floor(cellSize * 0.25)}px Arial`, fill: '#228B22' }
+      ).setOrigin(1, 0).setDepth(10);
+
+      let agText = scene.add.text(
+        x + 5,
+        y + cellSize - 5,
+        cell.cellData.ag,
+        { font: `${Math.floor(cellSize * 0.25)}px Arial`, fill: '#5C4033' }
+      ).setOrigin(0, 1).setDepth(10);
+
       cell.envText = envText;
-      cell.agText = agText;
-      
+      cell.agText  = agText;
+
       cell.on('pointerdown', () => {
         if (!cell.claimed) {
           const claimingTeam = scene.currentPlayer;
-          const center = cell.getCenter();
+          const center       = cell.getCenter();
           scene.input.enabled = false;
           let movingIcon;
-          
-          // On desktop (window.innerWidth >= 1024) use static sprites if available.
-          // On devices, always use the off-screen anchor approach.
+
+          // Desktop => use staticTree / staticTractor if available
+          // Mobile => use off-screen approach
           if (window.innerWidth >= 1024) {
             if (claimingTeam === 'green' && scene.staticTree) {
               movingIcon = scene.add.image(scene.staticTree.x, scene.staticTree.y, 'tree')
@@ -74,14 +78,12 @@ export function createGrid(scene, config) {
               movingIcon = scene.add.image(scene.staticTractor.x, scene.staticTractor.y, 'tractor')
                 .setDisplaySize(cellSize, cellSize);
             } else {
-              // Fallback to off-screen if static sprites are missing.
               movingIcon = getOffScreenSprite(scene, claimingTeam, cellSize, margin, gridSize);
             }
           } else {
-            // For devices: use the off-screen anchor approach.
             movingIcon = getOffScreenSprite(scene, claimingTeam, cellSize, margin, gridSize);
           }
-          
+
           scene.tweens.add({
             targets: movingIcon,
             x: center.x,
@@ -89,12 +91,13 @@ export function createGrid(scene, config) {
             duration: 600,
             onComplete: () => {
               movingIcon.destroy();
-              const randomIndex = Phaser.Math.Between(1, 10);
-              const claimKey = (claimingTeam === 'green')
-                ? 'green' + randomIndex
-                : 'farmer' + randomIndex;
+              const rIndex = Phaser.Math.Between(1, 10);
+              const claimKey = (claimingTeam === 'green') 
+                ? 'green' + rIndex 
+                : 'farmer' + rIndex;
               scene.add.image(center.x, center.y, claimKey)
                 .setDisplaySize(cellSize, cellSize);
+
               scene.input.enabled = true;
               if (claimingTeam === 'green') {
                 scene.greenPureScore += cell.cellData.cons;
@@ -113,17 +116,23 @@ export function createGrid(scene, config) {
                 scene.farmerScore += cell.cellData.ag;
                 scene.availFarmerClaims = Math.max(0, scene.availFarmerClaims - 1);
               }
-              if (scene.farmerScoreText) scene.farmerScoreText.setText(`Farmer: ${scene.farmerScore}`);
-              if (scene.greenScoreText) scene.greenScoreText.setText(`Green: ${scene.greenScore}`);
-              if (scene.farmerClaimsText) scene.farmerClaimsText.setText(`Claims: ${scene.availFarmerClaims}`);
-              if (scene.greenClaimsText) scene.greenClaimsText.setText(`Claims: ${scene.availGreenClaims}`);
-              cell.claimed = true;
-              cell.cellData.owner = claimingTeam;
+
+              if (scene.farmerScoreText) scene.farmerScoreText.setText(`Farmer Score: ${scene.farmerScore}`);
+              if (scene.greenScoreText)  scene.greenScoreText.setText(`Green Score: ${scene.greenScore}`);
+              if (scene.farmerClaimsText) scene.farmerClaimsText.setText(`Farmer Claims: ${scene.availFarmerClaims}`);
+              if (scene.greenClaimsText)  scene.greenClaimsText.setText(`Green Claims: ${scene.availGreenClaims}`);
+
+              cell.claimed          = true;
+              cell.cellData.owner   = claimingTeam;
               cell.envText.setColor('#ffffff');
               cell.agText.setColor('#ffffff');
+
+              // Switch turn
               scene.currentPlayer = (claimingTeam === 'green') ? 'farmer' : 'green';
               scene.updateTurnText();
+
               skipIfNoClaims(scene);
+
               if (scene.currentPlayer === scene.computerTeam) {
                 scene.input.enabled = false;
                 scene.time.delayedCall(500, () => {
@@ -147,35 +156,30 @@ export function createGrid(scene, config) {
           cell.claimed = true;
         }
       });
-      
+
       grid[row][col] = cell;
     }
   }
   return grid;
 }
 
-/**
- * Returns a moving sprite (tree for green, tractor for farmer) starting off-screen,
- * with its Y coordinate chosen randomly within a vertical band centered on the grid.
- */
 function getOffScreenSprite(scene, claimingTeam, cellSize, margin, gridSize) {
-  // Retrieve grid starting Y and height from userOptions.
   const gridStartY = scene.userOptions.gridStartY;
-  const gridHeight = scene.userOptions.gridHeight || (gridSize * cellSize + (gridSize - 1) * margin);
+  const gridHeight = scene.userOptions.gridHeight 
+                     || (gridSize * cellSize + (gridSize - 1) * margin);
   const gridCenterY = gridStartY + gridHeight / 2;
-  // Define a vertical band covering 2/3 of the grid height, centered on the grid.
   const bandFraction = 2 / 3;
-  const bandHeight = gridHeight * bandFraction;
-  const halfBand = bandHeight / 2;
-  const minY = gridCenterY - halfBand;
-  const maxY = gridCenterY + halfBand;
-  
+  const bandHeight   = gridHeight * bandFraction;
+  const halfBand     = bandHeight / 2;
+  const minY         = gridCenterY - halfBand;
+  const maxY         = gridCenterY + halfBand;
+
   let startX, startY;
   if (claimingTeam === 'green') {
-    startX = -cellSize;  // off-screen left
+    startX = -cellSize; // off-screen left
     startY = Phaser.Math.Between(minY, maxY);
   } else {
-    startX = scene.userOptions.gameWidth + cellSize;  // off-screen right
+    startX = scene.userOptions.gameWidth + cellSize; // off-screen right
     startY = Phaser.Math.Between(minY, maxY);
   }
   
@@ -184,7 +188,7 @@ function getOffScreenSprite(scene, claimingTeam, cellSize, margin, gridSize) {
 }
 
 /**
- * If the current player has 0 claims, switch to the other side or end the game.
+ * If current player has 0 claims, either switch or end game.
  */
 function skipIfNoClaims(scene) {
   if (scene.currentPlayer === 'farmer' && scene.availFarmerClaims <= 0) {
@@ -205,8 +209,7 @@ function skipIfNoClaims(scene) {
 }
 
 /**
- * Check if the game should end (if both sides have no claims left or there are no unclaimed cells).
- * Then, assign all leftover cells to green (displacement) and display final results.
+ * If both out of claims or no unclaimed cells, do leftover => green => displacement, then display results.
  */
 function maybeEndGame(scene) {
   let anyUnclaimed = false;
@@ -219,45 +222,46 @@ function maybeEndGame(scene) {
     }
     if (anyUnclaimed) break;
   }
+
   if ((scene.availFarmerClaims === 0 && scene.availGreenClaims === 0) || !anyUnclaimed) {
-    // Assign any unclaimed cells to green.
+    // leftover => green => displacement
     for (let row of scene.grid) {
       for (let cell of row) {
         if (!cell.claimed) {
-          cell.claimed = true;
+          cell.claimed        = true;
           cell.cellData.owner = 'green';
           scene.greenDisplacementScore += cell.cellData.cons;
+
           let center = cell.getCenter();
-          scene.add.image(center.x, center.y, 'green' + Phaser.Math.Between(1, 10))
+          scene.add.image(center.x, center.y, 'green' + Phaser.Math.Between(1,10))
             .setDisplaySize(cell.width, cell.height);
+          
           cell.envText.setColor('#ffffff');
           cell.agText.setColor('#ffffff');
         }
       }
     }
+
     scene.greenScore = scene.greenPureScore + scene.greenDisplacementScore;
-    scene.greenScoreText.setText(`Green Score: ${scene.greenScore}`);
-    scene.farmerScoreText.setText(`Farmer Score: ${scene.farmerScore}`);
-    // For mobile, use the mobile final results display.
-    if (window.innerWidth < 1024) {
-      displayFinalResults(scene); // This function should now detect mobile mode and replace the page.
-    } else {
-      // Desktop version: show the overlay as before.
-      displayFinalResults(scene);
+    if (scene.greenScoreText) {
+      scene.greenScoreText.setText(`Green Score: ${scene.greenScore}`);
     }
+    if (scene.farmerScoreText) {
+      scene.farmerScoreText.setText(`Farmer Score: ${scene.farmerScore}`);
+    }
+
+    // Now show final results (the original replace-page version).
+    displayFinalResults(scene);
   }
 }
 
-/**
- * Initializes the numeric grid.
- */
 function initializeGrid(gridSize, unsuitableProportion, correlation, maxValue) {
   const grid = [];
   for (let i = 0; i < gridSize; i++) {
     const row = [];
     for (let j = 0; j < gridSize; j++) {
       const [u1, u2] = generateUniformCorrelatedPair(correlation);
-      const ag_value = Math.round(rescaleToRange(u1, 1, maxValue));
+      const ag_value   = Math.round(rescaleToRange(u1, 1, maxValue));
       const cons_value = Math.round(rescaleToRange(u2, 1, maxValue));
       row.push({ ag: ag_value, cons: cons_value, owner: '' });
     }
@@ -266,42 +270,31 @@ function initializeGrid(gridSize, unsuitableProportion, correlation, maxValue) {
   return { grid };
 }
 
-/* --- Helper Math Functions --- */
+/* Helper math for correlation, random, etc. */
 function erf(x) {
   const sign = (x >= 0) ? 1 : -1;
   x = Math.abs(x);
-  const a1 = 0.254829592, a2 = -0.284496736, a3 = 1.421413741, a4 = -1.453152027, a5 = 1.061405429, p = 0.3275911;
+  const a1 = 0.254829592, a2 = -0.284496736, a3 = 1.421413741,
+        a4 = -1.453152027, a5 = 1.061405429, p = 0.3275911;
   const t = 1.0 / (1.0 + p * x);
-  const y = 1.0 - (((((a5 * t + a4) * t) + a3) * t + a2) * t + a1) * t * Math.exp(-x * x);
+  const y = 1.0 - ((((a5 * t + a4) * t) + a3) * t + a2) * t * Math.exp(-x*x);
   return sign * y;
 }
-
 function normCDF(x) {
   return 0.5 * (1 + erf(x / Math.sqrt(2)));
 }
-
 function randomNormal() {
   let u = 0, v = 0;
   while (u === 0) u = Math.random();
   while (v === 0) v = Math.random();
   return Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
 }
-
 function generateUniformCorrelatedPair(rho) {
   const z1 = randomNormal(), z2 = randomNormal();
-  const x = z1;
-  const y = rho * z1 + Math.sqrt(1 - rho * rho) * z2;
+  const x  = z1;
+  const y  = rho * z1 + Math.sqrt(1 - rho*rho) * z2;
   return [normCDF(x), normCDF(y)];
 }
-
 function rescaleToRange(u, minVal, maxVal) {
-  return minVal + (maxVal - minVal) * u;
-}
-
-function shuffleArray(arr) {
-  for (let i = arr.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [arr[i], arr[j]] = [arr[j], arr[i]];
-  }
-  return arr;
+  return minVal + (maxVal - minVal)*u;
 }

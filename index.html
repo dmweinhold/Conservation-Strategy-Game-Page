@@ -15,7 +15,6 @@
   <!-- Phaser -->
   <script src="https://cdn.jsdelivr.net/npm/phaser@3/dist/phaser.js"></script>
   
-  <!-- Styles (merged from both versions) -->
   <style>
     html, body {
       margin: 0;
@@ -126,14 +125,9 @@
       <img src="images/terrain.png" alt="Terrain" style="max-width: 50%; height: auto;" />
     </div>
     <div id="game-container"></div>
-    <!-- Game control buttons -->
-    <div id="game-controls" style="text-align: center; margin-top: 20px;">
-      <button id="playAgainBtn" type="button">Play Again</button>
-      <button id="exitBtn" type="button">Exit</button>
-    </div>
   </div>
 
-  <!-- Game modules -->
+  <!-- Load Modules -->
   <script type="module" src="UserInput.js"></script>
   <script type="module" src="grid.js"></script>
   <script type="module" src="strategy.js"></script>
@@ -152,44 +146,27 @@
     document.getElementById('startButton').addEventListener('click', function () {
       document.getElementById('landing-page').style.display = 'none';
       document.getElementById('game-ui').style.display = 'block';
-      // Optionally start the Phaser game:
-      // startPhaserGame();
     });
 
-    // "Play Again" button: reset game without reloading the page.
-    document.getElementById('playAgainBtn').addEventListener('click', function () {
-      // Call your game reset function; for example:
-      if (typeof resetGame === 'function') {
-        resetGame();
-      } else if (typeof startPhaserGame === 'function') {
-        startPhaserGame();
-      }
-    });
-
-    // "Exit" button: return to the landing page.
-    document.getElementById('exitBtn').addEventListener('click', function () {
-      // Optional: perform any cleanup or stop game logic here.
-      document.getElementById('game-ui').style.display = 'none';
-      document.getElementById('landing-page').style.display = 'block';
-    });
-  </script>
-
-  <!-- Auto-start logic for PWA: skip landing page if flag set -->
-  <script type="module">
-    import { startPhaserGame } from './main.js';
-    window.addEventListener('load', () => {
-      if (localStorage.getItem('autoStartGame') === 'true') {
-        const options = JSON.parse(localStorage.getItem('gameOptions'));
-        localStorage.removeItem('autoStartGame'); // clear the flag
-        
-        // Remove landing page entirely
-        const landingPage = document.getElementById('landing-page');
-        if (landingPage) {
-          landingPage.remove();
-        }
-        document.getElementById('game-ui').style.display = 'block';
-        startPhaserGame(options);
-      }
+    // Handle install prompt
+    let deferredPrompt;
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      const installBtn = document.getElementById('installAppBtn');
+      installBtn.style.display = 'inline-block';
+      installBtn.addEventListener('click', () => {
+        installBtn.style.display = 'none';
+        deferredPrompt.prompt();
+        deferredPrompt.userChoice.then((choiceResult) => {
+          if (choiceResult.outcome === 'accepted') {
+            console.log('✅ User accepted the install prompt');
+          } else {
+            console.log('ℹ️ User dismissed the install prompt');
+          }
+          deferredPrompt = null;
+        });
+      });
     });
   </script>
 </body>

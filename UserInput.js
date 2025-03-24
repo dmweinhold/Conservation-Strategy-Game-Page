@@ -111,8 +111,8 @@ function buildUI() {
   uiContainer.appendChild(document.createElement('br'));
 
   function updateClaimOptions() {
-    const gridSize = parseInt(gridSizeSelect.value, 10);
-    const totalCells = gridSize * gridSize;
+    const gs = parseInt(gridSizeSelect.value, 10);
+    const totalCells = gs * gs;
     fClaimsSelect.innerHTML = '';
     for (let i = 0; i <= totalCells; i++) {
       const option = document.createElement('option');
@@ -125,8 +125,8 @@ function buildUI() {
   }
   gridSizeSelect.onchange = updateClaimOptions;
   fClaimsSelect.onchange = () => {
-    const gridSize = parseInt(gridSizeSelect.value, 10);
-    const totalCells = gridSize * gridSize;
+    const gs = parseInt(gridSizeSelect.value, 10);
+    const totalCells = gs * gs;
     gClaimsDisplay.value = totalCells - parseInt(fClaimsSelect.value, 10);
   };
   updateClaimOptions();
@@ -134,16 +134,26 @@ function buildUI() {
   const startBtn = document.createElement('button');
   startBtn.innerText = 'Start Game';
   startBtn.onclick = () => {
-    const userTeam = sideSelect.value;
+    const userTeam         = sideSelect.value;
     const computerStrategy = compStratSelect.value;
-    const correlation = corrInput.value;
-    const leakage = leakSelect.value;
-    const farmerClaims = fClaimsSelect.value;
-    const greenClaims = gClaimsDisplay.value;
-    const gridSize = gridSizeSelect.value;
+    const correlation      = corrInput.value;
+    const leakage          = leakSelect.value;
+    const farmerClaims     = fClaimsSelect.value;
+    const greenClaims      = gClaimsDisplay.value;
+    const gridSize         = gridSizeSelect.value;
+
     uiContainer.style.display = 'none';
     document.getElementById('terrain-wrapper').style.display = 'none';
-    startPhaserGame({ userTeam, computerStrategy, correlation, leakage, farmerClaims, greenClaims, gridSize });
+
+    startPhaserGame({
+      userTeam,
+      computerStrategy,
+      correlation,
+      leakage,
+      farmerClaims,
+      greenClaims,
+      gridSize
+    });
   };
   uiContainer.appendChild(startBtn);
 
@@ -151,6 +161,7 @@ function buildUI() {
     const humanSide = sideSelect.value;
     compStratSelect.innerHTML = '';
     if (humanSide === 'green') {
+      // Farmer is AI
       ['naive profit maximizer', 'strategic profit maximizer'].forEach(strat => {
         let opt = document.createElement('option');
         opt.value = strat;
@@ -158,6 +169,7 @@ function buildUI() {
         compStratSelect.appendChild(opt);
       });
     } else {
+      // Green is AI
       ['maximize environmental score', 'block farmers', 'hot spot'].forEach(strat => {
         let opt = document.createElement('option');
         opt.value = strat;
