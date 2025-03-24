@@ -139,14 +139,18 @@
       document.getElementById('game-ui').style.display = 'block';
     });
   </script>
-  <!-- Auto-start logic as a module -->
+  <!-- Auto-start logic -->
   <script type="module">
     import { startPhaserGame } from './main.js';
     window.addEventListener('load', () => {
       if (localStorage.getItem('autoStartGame') === 'true') {
         const options = JSON.parse(localStorage.getItem('gameOptions'));
-        localStorage.removeItem('autoStartGame'); // clear flag so it doesn't loop
-        document.getElementById('landing-page').style.display = 'none';
+        localStorage.removeItem('autoStartGame'); // clear the flag
+        // Remove landing page entirely so only game UI remains.
+        const landingPage = document.getElementById('landing-page');
+        if (landingPage) {
+          landingPage.remove();
+        }
         document.getElementById('game-ui').style.display = 'block';
         startPhaserGame(options);
       }
