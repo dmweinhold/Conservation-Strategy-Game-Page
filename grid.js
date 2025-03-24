@@ -1,4 +1,3 @@
-
 // grid.js
 import { computerChoosePlot } from './strategy.js';
 import { displayFinalResults } from './main.js';
@@ -6,8 +5,6 @@ import { displayFinalResults } from './main.js';
 /**
  * Creates an interactive grid of cells and returns it as a 2D array (grid[row][col]).
  */
-// grid.js
-// grid.js
 export function createGrid(scene, config) {
   const {
     gridSize,
@@ -20,9 +17,15 @@ export function createGrid(scene, config) {
     maxValue = 20,
     BAUSet = []
   } = config;
+  
+  // Optionally store grid start Y and gridHeight for later use in pointerdown animations.
+  scene.userOptions.gridStartY = startY;
+  
+  // Create the grid data
   const gridData = initializeGrid(gridSize, unsuitableProportion, correlation, maxValue);
   const cellValues = gridData.grid;
   let grid = [];
+  
   for (let row = 0; row < gridSize; row++) {
     grid[row] = [];
     for (let col = 0; col < gridSize; col++) {
@@ -30,6 +33,8 @@ export function createGrid(scene, config) {
       const y = startY + row * (cellSize + margin);
       const { ag, cons } = cellValues[row][col];
       const strokeColor = cons > ag ? 0x228B22 : cons < ag ? 0x654321 : 0xA9A9A9;
+      
+      // Create the cell rectangle
       let cell = scene.add.rectangle(x, y, cellSize, cellSize, 0xffffff)
         .setOrigin(0, 0)
         .setStrokeStyle(2, strokeColor)
@@ -39,30 +44,60 @@ export function createGrid(scene, config) {
       cell.col = col;
       cell.cellData = cellValues[row][col];
       cell.cellData.isBAU = BAUSet.some(coord => coord.row === row && coord.col === col);
+      
+      // Add cell texts for environmental and agricultural values.
       let envText = scene.add.text(x + cellSize - 5, y + 5, cell.cellData.cons, {
         font: `${Math.floor(cellSize * 0.25)}px Arial`,
         fill: '#228B22'
       }).setOrigin(1, 0).setDepth(10);
+      
       let agText = scene.add.text(x + 5, y + cellSize - 5, cell.cellData.ag, {
         font: `${Math.floor(cellSize * 0.25)}px Arial`,
         fill: '#5C4033'
       }).setOrigin(0, 1).setDepth(10);
+      
       cell.envText = envText;
       cell.agText = agText;
+      
+      // Pointerdown handler for claiming a cell
       cell.on('pointerdown', () => {
         if (!cell.claimed) {
           const claimingTeam = scene.currentPlayer;
           const center = cell.getCenter();
           scene.input.enabled = false;
           let movingIcon;
-          // For mobile, use the center if static images are not available.
-          if (claimingTeam === 'green') {
-            movingIcon = scene.add.image(scene.staticTree ? scene.staticTree.x : center.x, scene.staticTree ? scene.staticTree.y : center.y, 'tree')
+          
+          // If static sprite exists (desktop), use its coordinates
+          if (claimingTeam === 'green' && scene.staticTree) {
+            movingIcon = scene.add.image(scene.staticTree.x, scene.staticTree.y, 'tree')
+              .setDisplaySize(cellSize, cellSize);
+          } else if (claimingTeam === 'farmer' && scene.staticTractor) {
+            movingIcon = scene.add.image(scene.staticTractor.x, scene.staticTractor.y, 'tractor')
               .setDisplaySize(cellSize, cellSize);
           } else {
-            movingIcon = scene.add.image(scene.staticTractor ? scene.staticTractor.x : center.x, scene.staticTractor ? scene.staticTractor.y : center.y, 'tractor')
-              .setDisplaySize(cellSize, cellSize);
+            // For device mode (or if static sprite not available), spawn off-screen.
+            // Compute vertical band based on grid's vertical center.
+            const gridStartY = scene.userOptions.gridStartY; 
+            const gridHeight = scene.userOptions.gridHeight || (gridSize * cellSize + (gridSize - 1) * margin);
+            const gridCenterY = gridStartY + gridHeight / 2;
+            const bandFraction = 2 / 3;
+            const bandHeight = gridHeight * bandFraction;
+            const halfBand = bandHeight / 2;
+            const minY = gridCenterY - halfBand;
+            const maxY = gridCenterY + halfBand;
+            
+            if (claimingTeam === 'green') {
+              // Tree comes from the left.
+              movingIcon = scene.add.image(-cellSize, Phaser.Math.Between(minY, maxY), 'tree')
+                .setDisplaySize(cellSize, cellSize);
+            } else {
+              // Tractor comes from the right.
+              movingIcon = scene.add.image(scene.gameWidth + cellSize, Phaser.Math.Between(minY, maxY), 'tractor')
+                .setDisplaySize(cellSize, cellSize);
+            }
           }
+          
+          // Tween the moving sprite to the cell's center.
           scene.tweens.add({
             targets: movingIcon,
             x: center.x,
@@ -71,8 +106,11 @@ export function createGrid(scene, config) {
             onComplete: () => {
               movingIcon.destroy();
               const randomIndex = Phaser.Math.Between(1, 10);
-              const claimKey = claimingTeam === 'green' ? 'green' + randomIndex : 'farmer' + randomIndex;
-              scene.add.image(center.x, center.y, claimKey).setDisplaySize(cellSize, cellSize);
+              const claimKey = (claimingTeam === 'green')
+                ? 'green' + randomIndex
+                : 'farmer' + randomIndex;
+              scene.add.image(center.x, center.y, claimKey)
+                .setDisplaySize(cellSize, cellSize);
               scene.input.enabled = true;
               if (claimingTeam === 'green') {
                 scene.greenPureScore += cell.cellData.cons;
@@ -99,13 +137,15 @@ export function createGrid(scene, config) {
               cell.cellData.owner = claimingTeam;
               cell.envText.setColor('#ffffff');
               cell.agText.setColor('#ffffff');
-              scene.currentPlayer = claimingTeam === 'green' ? 'farmer' : 'green';
+              scene.currentPlayer = (claimingTeam === 'green') ? 'farmer' : 'green';
               scene.updateTurnText();
               skipIfNoClaims(scene);
               if (scene.currentPlayer === scene.computerTeam) {
                 scene.input.enabled = false;
                 scene.time.delayedCall(500, () => {
-                  const claimParam = scene.currentPlayer === 'green' ? scene.availGreenClaims : scene.availFarmerClaims;
+                  const claimParam = (scene.currentPlayer === 'green')
+                    ? scene.availGreenClaims
+                    : scene.availFarmerClaims;
                   const move = computerChoosePlot(scene.computerStrategy, scene.grid, claimParam);
                   if (move) {
                     scene.grid[move.row][move.col].emit('pointerdown');
@@ -123,14 +163,12 @@ export function createGrid(scene, config) {
           cell.claimed = true;
         }
       });
+      
       grid[row][col] = cell;
     }
   }
   return grid;
 }
-
-// (Assume helper functions like initializeGrid, skipIfNoClaims, and maybeEndGame are included.)
-
 
 /**
  * If the current player has 0 claims, switch immediately to the other side,
@@ -158,7 +196,7 @@ function skipIfNoClaims(scene) {
  * Check if the game should end:
  *  - if both sides are out of claims, OR
  *  - if there are no unclaimed cells left.
- * Then leftover => green => displacement, call displayFinalResults.
+ * Then leftover => green => displacement, and call displayFinalResults.
  */
 function maybeEndGame(scene) {
   let anyUnclaimed = false;
@@ -171,46 +209,35 @@ function maybeEndGame(scene) {
     }
     if (anyUnclaimed) break;
   }
-
-  if (
-    (scene.availFarmerClaims === 0 && scene.availGreenClaims === 0) ||
-    !anyUnclaimed
-  ) {
-    // leftover => green => displacement
+  if ((scene.availFarmerClaims === 0 && scene.availGreenClaims === 0) || !anyUnclaimed) {
+    // Leftover cells are assigned to green (displacement)
     for (let row of scene.grid) {
       for (let cell of row) {
         if (!cell.claimed) {
           cell.claimed = true;
           cell.cellData.owner = 'green';
           scene.greenDisplacementScore += cell.cellData.cons;
-
           let center = cell.getCenter();
-          scene.add.image(
-            center.x,
-            center.y,
-            'green' + Phaser.Math.Between(1, 10)
-          ).setDisplaySize(cell.width, cell.height);
-
+          scene.add.image(center.x, center.y, 'green' + Phaser.Math.Between(1, 10))
+            .setDisplaySize(cell.width, cell.height);
           cell.envText.setColor('#ffffff');
           cell.agText.setColor('#ffffff');
         }
       }
     }
-
     scene.greenScore = scene.greenPureScore + scene.greenDisplacementScore;
     scene.greenScoreText.setText(`Green Score: ${scene.greenScore}`);
     scene.farmerScoreText.setText(`Farmer Score: ${scene.farmerScore}`);
-
     displayFinalResults(scene);
-    // scene.input.enabled = false;
   }
 }
 
-// ---------- Initialization of the numeric grid ----------
+/**
+ * Initializes the numeric grid with values for agriculture and conservation.
+ */
 function initializeGrid(gridSize, unsuitableProportion, correlation, maxValue) {
   const numCells = gridSize * gridSize;
   const grid = [];
-
   for (let i = 0; i < gridSize; i++) {
     const row = [];
     for (let j = 0; j < gridSize; j++) {
@@ -221,24 +248,16 @@ function initializeGrid(gridSize, unsuitableProportion, correlation, maxValue) {
     }
     grid.push(row);
   }
-
   return { grid };
 }
 
-
-// Helper math
+// --- Helper Math Functions ---
 function erf(x) {
   const sign = (x >= 0) ? 1 : -1;
   x = Math.abs(x);
-  const a1 = 0.254829592;
-  const a2 = -0.284496736;
-  const a3 = 1.421413741;
-  const a4 = -1.453152027;
-  const a5 = 1.061405429;
-  const p = 0.3275911;
+  const a1 = 0.254829592, a2 = -0.284496736, a3 = 1.421413741, a4 = -1.453152027, a5 = 1.061405429, p = 0.3275911;
   const t = 1.0 / (1.0 + p * x);
-  const y = 1.0 - (((((a5 * t + a4) * t) + a3) * t + a2) * t + a1) *
-                t * Math.exp(-x*x);
+  const y = 1.0 - (((((a5 * t + a4) * t) + a3) * t + a2) * t + a1) * t * Math.exp(-x*x);
   return sign * y;
 }
 
@@ -254,10 +273,9 @@ function randomNormal() {
 }
 
 function generateUniformCorrelatedPair(rho) {
-  const z1 = randomNormal();
-  const z2 = randomNormal();
+  const z1 = randomNormal(), z2 = randomNormal();
   const x = z1;
-  const y = rho * z1 + Math.sqrt(1 - rho*rho) * z2;
+  const y = rho * z1 + Math.sqrt(1 - rho * rho) * z2;
   return [normCDF(x), normCDF(y)];
 }
 
