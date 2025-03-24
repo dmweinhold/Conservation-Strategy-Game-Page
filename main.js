@@ -67,7 +67,7 @@ class MyScene extends Phaser.Scene {
   }
 
   create() {
-    // Unpack user options (these come from UserInput.js)
+    // Unpack user options
     let {
       userTeam,
       computerStrategy,
@@ -131,7 +131,6 @@ class MyScene extends Phaser.Scene {
 
     // Scoreboard positioning
     if (isDesktop) {
-      // Desktop: use fixed positions near top
       const farmerScoreStyle = { font: '24px Arial', fill: '#654321' };
       const greenScoreStyle = { font: '24px Arial', fill: '#228B22' };
       const claimsStyleFarmer = { font: '20px Arial', fill: '#654321' };
@@ -142,7 +141,6 @@ class MyScene extends Phaser.Scene {
       this.greenClaimsText = this.add.text(20, 90, `Green Claims: ${this.availGreenClaims}`, claimsStyleGreen);
       this.turnText = this.add.text(gameWidth / 2, 30, `Current Turn: ${this.currentPlayer}`, { font: '24px Arial', fill: '#ffffff' }).setOrigin(0.5, 0);
     } else {
-      // Mobile: scoreboard above grid and turn text below grid
       const scoreFontSize = Math.max(18, Math.floor(cellSize * 0.3));
       const smallFontSize = Math.max(16, Math.floor(cellSize * 0.25));
       this.greenScoreText = this.add.text(startX, startY - 50, `Green: ${this.greenScore}`, { font: `${scoreFontSize}px Arial`, fill: '#228B22' }).setDepth(9999);
@@ -150,11 +148,12 @@ class MyScene extends Phaser.Scene {
       this.farmerScoreText = this.add.text(startX + gridWidth - 150, startY - 50, `Farmer: ${this.farmerScore}`, { font: `${scoreFontSize}px Arial`, fill: '#654321' }).setDepth(9999);
       this.farmerClaimsText = this.add.text(startX + gridWidth - 150, startY - 50 + scoreFontSize, `Claims: ${this.availFarmerClaims}`, { font: `${smallFontSize}px Arial`, fill: '#654321' }).setDepth(9999);
       const turnFontSize = Math.max(20, Math.floor(cellSize * 0.3));
+      // For devices, place the turn text below the grid.
       this.turnText = this.add.text(gameWidth / 2, startY + gridHeight + 10, `Turn: ${this.currentPlayer}`, { font: `${turnFontSize}px Arial`, fill: '#000000' }).setOrigin(0.5, 0).setDepth(9999);
     }
     this.updateTurnText();
 
-    // Create the grid – note: on desktop we want fixed cellSize (100) as before
+    // Create the grid – on desktop use fixed cellSize (100), on devices use computed cellSize.
     const gridConfig = {
       gridSize,
       cellSize: isDesktop ? 100 : cellSize,
@@ -222,7 +221,135 @@ class MyScene extends Phaser.Scene {
   update() {}
 }
 
+/**
+ * Display final results overlay.
+ * On devices (window.innerWidth < 1024), destroy the Phaser game and replace the page with an HTML results screen.
+ * On desktop, show an overlay as before.
+ */
 export function displayFinalResults(scene) {
+  if (window.innerWidth < 1024) {
+    // Mobile results display: Destroy the game and build a new HTML page.
+    const optimalSW = calculateOptimalSocialWelfare(scene.grid);
+    const actualSW  = calculateActualSocialWelfare(scene.grid);
+    const welfareLoss = calculateSocialWelfareDifference(actualSW, optimalSW);
+    let additionalityVal = 'N/A';
+    if (scene.userOptions.userTeam === 'green') {
+      const greenClaimedTotal = calculateGreenClaimedTotal(scene.grid);
+      additionalityVal = calculateAdditionality(greenClaimedTotal, scene.greenBAU).toString();
+    }
+    let greenSuccessFraction = null;
+    if (scene.userOptions.userTeam === 'green' && scene.heuristicMaxGreenScore > 0) {
+      greenSuccessFraction = (scene.greenScore / scene.heuristicMaxGreenScore) * 100;
+    }
+    // Destroy the Phaser game.
+    scene.game.destroy(true, false);
+    document.body.innerHTML = '';
+    const container = document.createElement('div');
+    container.style.position = 'absolute';
+    container.style.top = '0';
+    container.style.left = '0';
+    container.style.width = '100%';
+    container.style.height = '100%';
+    container.style.background = '#6EA06E';
+    container.style.color = '#4D341A';
+    container.style.display = 'flex';
+    container.style.flexDirection = 'column';
+    container.style.alignItems = 'center';
+    container.style.justifyContent = 'center';
+    container.style.fontFamily = 'Arial, sans-serif';
+    container.style.padding = '10px';
+    
+    const title = document.createElement('h1');
+    title.textContent = 'Final Results';
+    container.appendChild(title);
+    
+    const statsArea = document.createElement('div');
+    statsArea.style.fontSize = '1.2em';
+    statsArea.style.textAlign = 'left';
+    statsArea.style.margin = '20px';
+    statsArea.style.width = '320px';
+    statsArea.style.padding = '10px';
+    
+    const metricsHeading = document.createElement('div');
+    metricsHeading.textContent = 'Metrics';
+    metricsHeading.style.fontSize = '1.4em';
+    metricsHeading.style.marginTop = '20px';
+    metricsHeading.style.fontWeight = 'bold';
+    metricsHeading.style.textAlign = 'left';
+    statsArea.appendChild(metricsHeading);
+    
+    const greenScoreLine = document.createElement('p');
+    greenScoreLine.textContent = `Green Score: ${scene.greenScore}`;
+    statsArea.appendChild(greenScoreLine);
+    
+    const pureLine = document.createElement('p');
+    pureLine.textContent = `  Pure Strategy: ${scene.greenPureScore}`;
+    pureLine.style.marginLeft = '25px';
+    statsArea.appendChild(pureLine);
+    
+    const dispLine = document.createElement('p');
+    dispLine.textContent = `  Displacement: ${scene.greenDisplacementScore}`;
+    dispLine.style.marginLeft = '25px';
+    statsArea.appendChild(dispLine);
+    
+    if (scene.userOptions.userTeam === 'green') {
+      let addLine = document.createElement('p');
+      addLine.textContent = `Additionality: ${additionalityVal}`;
+      statsArea.appendChild(addLine);
+    }
+    
+    const performanceHeading = document.createElement('div');
+    performanceHeading.textContent = 'Performance';
+    performanceHeading.style.fontSize = '1.4em';
+    performanceHeading.style.marginTop = '20px';
+    performanceHeading.style.fontWeight = 'bold';
+    performanceHeading.style.textAlign = 'left';
+    statsArea.appendChild(performanceHeading);
+    
+    let welfareLine = document.createElement('p');
+    welfareLine.textContent = `Social Welfare Loss (%): ${welfareLoss.toFixed(2)}%`;
+    statsArea.appendChild(welfareLine);
+    
+    if (greenSuccessFraction !== null) {
+      let successLine = document.createElement('p');
+      successLine.textContent = `Green Success (%): ${greenSuccessFraction.toFixed(1)}%`;
+      statsArea.appendChild(successLine);
+    }
+    
+    container.appendChild(statsArea);
+    
+    const btnStyle = `
+      display: inline-block;
+      margin: 10px;
+      padding: 15px 25px;
+      border: none;
+      border-radius: 5px;
+      background-color: #228B22;
+      color: #ffffff;
+      font-size: 1em;
+      cursor: pointer;
+    `;
+    
+    const buttonArea = document.createElement('div');
+    
+    const playAgainBtn = document.createElement('button');
+    playAgainBtn.textContent = 'Play Again';
+    playAgainBtn.style.cssText = btnStyle;
+    playAgainBtn.onclick = () => { window.location.reload(); };
+    buttonArea.appendChild(playAgainBtn);
+    
+    const exitBtn = document.createElement('button');
+    exitBtn.textContent = 'End & Exit';
+    exitBtn.style.cssText = btnStyle;
+    exitBtn.onclick = () => { window.location.href = 'about:blank'; };
+    buttonArea.appendChild(exitBtn);
+    
+    container.appendChild(buttonArea);
+    document.body.appendChild(container);
+    return;
+  }
+  
+  // Desktop: Show overlay as before.
   const userTeam = scene.userOptions.userTeam || 'farmer';
   const optimalSW = calculateOptimalSocialWelfare(scene.grid);
   const actualSW  = calculateActualSocialWelfare(scene.grid);
@@ -249,7 +376,7 @@ export function displayFinalResults(scene) {
   scene.add.text(leftColX, colStartY + 3 * lineSpacing, `Additionality: ${additionalityVal}`, { font: '28px Arial', fill: '#4D341A' });
   scene.add.text(rightColX, bg.y + 20, 'Performance:', { font: '32px Arial', fill: '#4D341A' });
   scene.add.text(rightColX, colStartY, `Welfare Loss: ${welfareLoss.toFixed(2)}%`, { font: '28px Arial', fill: '#4D341A' });
-  if (userTeam === 'green' && scene.heuristicMaxGreenScore > 0) {
+  if (userTeam === 'green' && scene.heuristicMaxGreenScore && scene.heuristicMaxGreenScore > 0) {
     const fraction = (scene.greenScore / scene.heuristicMaxGreenScore) * 100;
     scene.add.text(rightColX, colStartY + lineSpacing, `Green Success: ${fraction.toFixed(1)}%`, { font: '28px Arial', fill: '#4D341A' });
   }
