@@ -14,9 +14,9 @@ import {
 /**
  * Compute dimensions based on the viewport.
  * 
- * - For desktop (screenWidth ≥ 1024): fixed cell size (100px) and extra margins.
- * - For tablets (768px ≤ screenWidth < 1024): reserve a header area and calculate the grid based on available space.
- * - For mobile (screenWidth < 768): use 95% of the viewport.
+ * - For desktop (width ≥ 1024): fixed cell size (100px) plus extra margins.
+ * - For tablets (768px ≤ width < 1024): reserve a header area and calculate grid based on available space.
+ * - For mobile (width < 768): use 95% of viewport.
  */
 function computeGameDimensions(gridSize, margin = 5) {
   const screenWidth = window.innerWidth;
@@ -38,18 +38,15 @@ function computeGameDimensions(gridSize, margin = 5) {
   }
   else if (screenWidth >= 768 && screenWidth < 1024) {
     // Tablet-specific settings
-    // Reserve a header for the scoreboard (e.g., 80px) plus a small margin.
-    const headerHeight = 80;
+    const headerHeight = 80; // reserve space for scoreboard
     const availableHeight = screenHeight - headerHeight - 20;
     const availableWidth = screenWidth * 0.95;
     const available = Math.min(availableWidth, availableHeight);
     const cellSize = Math.floor((available - (gridSize - 1) * margin) / gridSize);
     const gridWidth = gridSize * cellSize + (gridSize - 1) * margin;
     const gridHeight = gridWidth;
-    // Use full screen dimensions for the game canvas
-    const gameWidth = screenWidth;
-    const gameHeight = screenHeight;
-    return { gameWidth, gameHeight, gridWidth, gridHeight, cellSize };
+    // For tablets, we use full viewport dimensions
+    return { gameWidth: screenWidth, gameHeight: screenHeight, gridWidth, gridHeight, cellSize };
   }
   else {
     // Mobile settings
@@ -61,32 +58,27 @@ function computeGameDimensions(gridSize, margin = 5) {
   }
 }
 
-/**
- * Main game scene.
- */
 class MyScene extends Phaser.Scene {
   constructor() {
     super({ key: 'MyScene' });
   }
 
   init(data) {
-    // Data passed from startPhaserGame
     this.userOptions = data || {};
   }
 
   preload() {
-    // Load team icons (from 1 to 10)
+    // Load team icons 1 to 10
     for (let i = 1; i <= 10; i++) {
       this.load.image('green' + i, 'images/C' + i + '.png');
       this.load.image('farmer' + i, 'images/A' + i + '.png');
     }
-    // Load additional images (tree and tractor)
+    // Load additional images
     this.load.image('tree', 'images/tree.png');
     this.load.image('tractor', 'images/tractor.png');
   }
 
   create() {
-    // Unpack user options
     let { userTeam, computerStrategy, correlation, leakage, farmerClaims, greenClaims, gridSize } = this.userOptions;
     this.currentPlayer = 'farmer'; // Farmer always goes first
 
@@ -100,7 +92,7 @@ class MyScene extends Phaser.Scene {
     gridSize     = parseInt(gridSize, 10);
     if (![4,6,8,10].includes(gridSize)) gridSize = 4;
 
-    // Decide computer side and leakage
+    // Set computer team and leakage
     if (userTeam === 'farmer') {
       this.computerTeam = 'green';
       this.computerStrategy = computerStrategy;
@@ -113,7 +105,7 @@ class MyScene extends Phaser.Scene {
 
     this.cameras.main.setBackgroundColor(0xEDE8E1);
 
-    // Initialize scores/claims
+    // Initialize scores and claims
     this.greenScore = 0;
     this.farmerScore = 0;
     this.greenPureScore = 0;
@@ -123,23 +115,23 @@ class MyScene extends Phaser.Scene {
     this.cumGreenBAU = 0;
     this.cumFarmerDeduction = 0;
 
-    const isDesktop = (window.innerWidth >= 1024);
     const dims = computeGameDimensions(gridSize);
     let { gameWidth, gameHeight, gridWidth, gridHeight, cellSize } = dims;
 
-    // Save computed dimensions for later use in grid animations
+    // Save computed dimensions (for use in grid animations)
     this.userOptions.gameWidth = gameWidth;
     this.userOptions.gameHeight = gameHeight;
     this.userOptions.gridWidth = gridWidth;
     this.userOptions.gridHeight = gridHeight;
     this.userOptions.cellSize = cellSize;
 
-    // For tablets and mobile, you might want to reserve space for the scoreboard
-    let startX = (gameWidth - gridWidth) / 2;
-    let startY = isDesktop ? 120 : 80;
+    // IMPORTANT: Use the actual canvas width to center the grid.
+    let startX = (this.cameras.main.width - gridWidth) / 2;
+    let startY = (window.innerWidth >= 1024) ? 120 : 80;
 
-    // Scoreboard positioning
-    if (isDesktop) {
+    // Scoreboard positioning:
+    if (window.innerWidth >= 1024) {
+      // Desktop: use your current positions.
       const farmerScoreStyle = { font: '24px Arial', fill: '#654321' };
       const greenScoreStyle = { font: '24px Arial', fill: '#228B22' };
       const claimsStyleFarmer = { font: '20px Arial', fill: '#654321' };
@@ -149,25 +141,26 @@ class MyScene extends Phaser.Scene {
       this.farmerClaimsText = this.add.text(gameWidth - 220, 90, `Farmer Claims: ${this.availFarmerClaims}`, claimsStyleFarmer);
       this.greenClaimsText = this.add.text(20, 90, `Green Claims: ${this.availGreenClaims}`, claimsStyleGreen);
       this.turnText = this.add.text(gameWidth / 2, 30, `Current Turn: ${this.currentPlayer}`, { font: '24px Arial', fill: '#ffffff' })
-                          .setOrigin(0.5, 0);
+                         .setOrigin(0.5, 0);
     } else {
-      // For tablets and mobile, keep the shorter text
+      // Tablet/Mobile: re-calc positions using the canvas width
       const scoreFontSize = Math.max(18, Math.floor(cellSize * 0.3));
       const smallFontSize = Math.max(16, Math.floor(cellSize * 0.25));
-      this.greenScoreText = this.add.text(startX, startY - 50, `Green: ${this.greenScore}`, { font: `${scoreFontSize}px Arial`, fill: '#228B22' }).setDepth(9999);
-      this.greenClaimsText = this.add.text(startX, startY - 50 + scoreFontSize, `Claims: ${this.availGreenClaims}`, { font: `${smallFontSize}px Arial`, fill: '#228B22' }).setDepth(9999);
-      this.farmerScoreText = this.add.text(startX + gridWidth - 150, startY - 50, `Farmer: ${this.farmerScore}`, { font: `${scoreFontSize}px Arial`, fill: '#654321' }).setDepth(9999);
-      this.farmerClaimsText = this.add.text(startX + gridWidth - 150, startY - 50 + scoreFontSize, `Claims: ${this.availFarmerClaims}`, { font: `${smallFontSize}px Arial`, fill: '#654321' }).setDepth(9999);
+      // Left–aligned for green score
+      this.greenScoreText = this.add.text(20, startY - 50, `Green: ${this.greenScore}`, { font: `${scoreFontSize}px Arial`, fill: '#228B22' }).setDepth(9999);
+      this.greenClaimsText = this.add.text(20, startY - 50 + scoreFontSize, `Claims: ${this.availGreenClaims}`, { font: `${smallFontSize}px Arial`, fill: '#228B22' }).setDepth(9999);
+      // Right–aligned for farmer score (using the canvas width)
+      this.farmerScoreText = this.add.text(this.cameras.main.width - 20, startY - 50, `Farmer: ${this.farmerScore}`, { font: `${scoreFontSize}px Arial`, fill: '#654321' }).setOrigin(1, 0).setDepth(9999);
+      this.farmerClaimsText = this.add.text(this.cameras.main.width - 20, startY - 50 + scoreFontSize, `Claims: ${this.availFarmerClaims}`, { font: `${smallFontSize}px Arial`, fill: '#654321' }).setOrigin(1, 0).setDepth(9999);
       const turnFontSize = Math.max(20, Math.floor(cellSize * 0.3));
-      this.turnText = this.add.text(gameWidth / 2, startY + gridHeight + 10, `Turn: ${this.currentPlayer}`, { font: `${turnFontSize}px Arial`, fill: '#000000' })
-                          .setOrigin(0.5, 0).setDepth(9999);
+      this.turnText = this.add.text(this.cameras.main.width / 2, startY + gridHeight + 10, `Turn: ${this.currentPlayer}`, { font: `${turnFontSize}px Arial`, fill: '#000000' }).setOrigin(0.5, 0).setDepth(9999);
     }
     this.updateTurnText();
 
-    // Create the grid
+    // Create grid using the computed dimensions
     const gridConfig = {
       gridSize,
-      cellSize: (isDesktop ? 100 : cellSize),
+      cellSize: (window.innerWidth >= 1024 ? 100 : cellSize),
       margin: 5,
       startX,
       startY,
@@ -178,7 +171,7 @@ class MyScene extends Phaser.Scene {
     };
     this.grid = createGrid(this, gridConfig);
 
-    // If computer is farmer, pre-calculate BAU set and score
+    // Pre-calculate BAU if computer is farmer
     if (this.computerTeam === 'farmer') {
       const farmerBAUSet = calculateFarmerBAUSet(this.grid, farmerClaims, this.computerStrategy, greenClaims);
       farmerBAUSet.forEach(coord => {
@@ -188,15 +181,14 @@ class MyScene extends Phaser.Scene {
     } else {
       this.greenBAU = 0;
     }
-    // If user is green, pre-calculate heuristic
     if (userTeam === 'green') {
       this.heuristicMaxGreenScore = calculateHeuristicMaxGreenScore(this.grid, greenClaims, farmerClaims, this.leakage);
     } else {
       this.heuristicMaxGreenScore = 0;
     }
 
-    // Show decorative images on desktop
-    if (isDesktop) {
+    // Desktop decorative images
+    if (window.innerWidth >= 1024) {
       const imageOffset = 130;
       this.staticTree = this.add.image(startX - imageOffset, startY + gridHeight / 2, 'tree').setDisplaySize(100, 100);
       this.staticTractor = this.add.image(startX + gridWidth + imageOffset, startY + gridHeight / 2, 'tractor').setDisplaySize(100, 100);
@@ -218,13 +210,9 @@ class MyScene extends Phaser.Scene {
       this.input.enabled = true;
     }
 
-    // Optional: Listen for resize events (Phaser RESIZE mode will update the canvas, but you
-    // might want to re-calc or reposition your UI elements here).
+    // Optional: Listen for resize events if you want to re-calc UI.
     this.scale.on('resize', (gameSize, baseSize, displaySize, resolution) => {
-      // You can re-run computeGameDimensions and reposition scoreboard texts if needed.
-      // For example:
-      // const dims = computeGameDimensions(gridSize);
-      // ... update this.farmerScoreText.x, etc.
+      // You might want to recalc positions here.
     });
   }
 
@@ -247,9 +235,9 @@ class MyScene extends Phaser.Scene {
 
 /**
  * Display final results.
- * - Desktop (width ≥1024): draw a green rectangle below the grid with metrics and two buttons.
- * - Mobile/Tablet (width <1024): create a full-screen DOM overlay with the same metrics and two buttons:
- *     "Play Again" (restart scene with same parameters) and "Start Over" (destroy game and return to landing page).
+ * - Desktop (width ≥1024): as before (draw a green rectangle below the grid with metrics).
+ * - Mobile/Tablet (width <1024): create a full-screen DOM overlay with final stats plus two buttons:
+ *      "Play Again" (restart scene with same parameters) and "Start Over" (destroy game and show landing page).
  */
 export function displayFinalResults(scene) {
   const userTeam = scene.userOptions.userTeam || 'farmer';
@@ -268,8 +256,8 @@ export function displayFinalResults(scene) {
     greenSuccessFraction = (scene.greenScore / scene.heuristicMaxGreenScore) * 100;
   }
 
-  // Mobile/Tablet final results overlay
   if (window.innerWidth < 1024) {
+    // Mobile/Tablet overlay final results
     const overlay = document.createElement('div');
     overlay.style.position = 'absolute';
     overlay.style.top = '0';
@@ -352,7 +340,7 @@ export function displayFinalResults(scene) {
       cursor: pointer;
     `;
 
-    // "Play Again" button: restart the same scene (fresh grid, same parameters)
+    // "Play Again" button: restart same scene (new grid, same parameters)
     const playAgainBtn = document.createElement('button');
     playAgainBtn.textContent = 'Play Again';
     playAgainBtn.style.cssText = btnStyle;
@@ -380,7 +368,7 @@ export function displayFinalResults(scene) {
     return;
   }
 
-  // Desktop final results: (unchanged)
+  // Desktop final results (unchanged)
   const lastRow = scene.grid[scene.grid.length - 1];
   const gridBottom = lastRow[0].y + lastRow[0].height;
   const offset = 50;
@@ -428,7 +416,6 @@ export function startPhaserGame(userOptions) {
     width: gameWidth,
     height: gameHeight,
     scale: {
-      // Use RESIZE mode to automatically adjust canvas size on orientation change.
       mode: Phaser.Scale.RESIZE,
       autoCenter: Phaser.Scale.CENTER_BOTH
     },
