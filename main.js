@@ -145,8 +145,8 @@ class MyScene extends Phaser.Scene {
     greenScoreText.setOrigin(1, 0);  // right-align this text
     farmerScoreText.setOrigin(0, 0); // left-align this text
     // Set positions so that they appear side by side with some gap
-    greenScoreText.x = -30;      // 10px to the left of container center
-    farmerScoreText.x = 10;      // 10px to the right
+    greenScoreText.x = -50;      // 10px to the left of container center
+    farmerScoreText.x = 30;      // 10px to the right
     headerContainer.add([greenScoreText, farmerScoreText]);
 
     // Similarly, create a container for claims (if needed) below the scores.
@@ -156,8 +156,8 @@ class MyScene extends Phaser.Scene {
     let farmerClaimsText = this.add.text(0, 0, `Farmer Claims: ${this.availFarmerClaims}`, { font: '20px Arial', fill: '#654321' });
     greenClaimsText.setOrigin(1, 0);
     farmerClaimsText.setOrigin(0, 0);
-    greenClaimsText.x = -30;
-    farmerClaimsText.x = 10;
+    greenClaimsText.x = -50;
+    farmerClaimsText.x = 30;
     claimsContainer.add([greenClaimsText, farmerClaimsText]);
 
     // Also, create turn text and center it.
