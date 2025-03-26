@@ -11,7 +11,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="Conservation Game">
   <link rel="apple-touch-icon" href="images/icon-192.png">
-
+  
   <!-- Phaser -->
   <script src="https://cdn.jsdelivr.net/npm/phaser@3/dist/phaser.js"></script>
   
@@ -20,13 +20,12 @@
       margin: 0;
       padding: 0;
       height: 100%;
-      overflow: hidden; /* we typically hide scroll for the game layout */
+      overflow: hidden;
     }
     body {
       background: #ddd;
       font-family: sans-serif;
     }
-    /* Landing page */
     #landing-page {
       background-color: #EDE8E1;
       min-height: 100vh;
@@ -52,21 +51,6 @@
       padding: 15px 40px;
       background-color: #6EA06E;
     }
-    footer {
-      text-align: center;
-      padding-top: 30px;
-      color: #4D341A;
-      font-size: 14px;
-    }
-
-    /* Game UI Container: hidden until user leaves landing page */
-    #game-ui {
-      display: none;
-      background: #EDE8E1;
-      min-height: 100vh;
-      padding: 20px;
-      text-align: center;
-    }
     #ui-container {
       width: 300px;
       margin: 10px auto;
@@ -74,26 +58,26 @@
       border: 1px solid #ccc;
       padding: 10px;
       border-radius: 5px;
-      display: block; /* shown initially */
+    }
+    #game-container {
+      text-align: center;
+      width: 100%;
+      height: 100%;
+    }
+    canvas {
+      display: block;
+      margin: 0 auto;
     }
     #terrain-wrapper {
       text-align: center;
-      margin: 20px auto;
+      margin-top: 20px;
     }
-    #terrain-wrapper img {
-      max-width: 50%;
-      height: auto;
+    footer {
+      text-align: center;
+      padding-top: 30px;
+      color: #4D341A;
+      font-size: 14px;
     }
-
-    /* The actual Phaser game area: hidden until "Start Game" is clicked */
-    #game-container {
-      display: none; /* user must click Start Game first */
-      width: 100%;
-      height: 100%;
-      margin: 0 auto;
-      background: #ddd; /* or any color */
-    }
-
     /* Mobile styles */
     @media (max-width: 768px) {
       #ui-container {
@@ -127,7 +111,7 @@
        style="display: inline-block; background-color: #4D341A; color: white; padding: 12px 24px; border-radius: 5px; text-decoration: none; margin-top: 80px;">
       📘 Download User Manual
     </a>
-    <button id="installAppBtn" type="button" style="display: none;">📲 Install App</button>
+    <button id="installAppBtn" type="button" style="display: none;">📲 Install App for device or offline use</button>
     <p style="font-size: 13px; color: #4D341A; margin-top: 10px;">
       <em>On iPhone/iPad, use Safari → Share → “Add to Home Screen” to install.</em>
     </p>
@@ -135,16 +119,11 @@
   </div>
 
   <!-- Game UI -->
-  <div id="game-ui">
-    <!-- The user input container (buildUI will populate) -->
+  <div id="game-ui" style="display: none;">
     <div id="ui-container"></div>
-
-    <!-- Optional terrain image -->
     <div id="terrain-wrapper">
-      <img src="images/terrain.png" alt="Terrain" />
+      <img src="images/terrain.png" alt="Terrain" style="max-width: 50%; height: auto;" />
     </div>
-
-    <!-- Phaser game area -->
     <div id="game-container"></div>
   </div>
 
@@ -163,11 +142,10 @@
         .catch(err => console.error('❌ Service Worker registration failed:', err));
     }
 
-    // "Play Game" button: hide landing page and show #game-ui (the setup form)
+    // "Play Game" button: hide landing page and show game UI
     document.getElementById('startButton').addEventListener('click', function () {
       document.getElementById('landing-page').style.display = 'none';
       document.getElementById('game-ui').style.display = 'block';
-      // The #game-container remains hidden until user clicks "Start Game" in the UI form
     });
 
     // Handle install prompt

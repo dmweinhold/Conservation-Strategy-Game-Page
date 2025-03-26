@@ -1,18 +1,14 @@
 // UserInput.js
-
 import { startPhaserGame } from './main.js';
 
-// The container where we build our input form
 const uiContainer = document.getElementById('ui-container');
 
 function buildUI() {
-  // Basic styling logic (mobile-friendly sizing)
   const isMobile = window.innerWidth < 768;
   uiContainer.style.width = isMobile ? '95%' : '300px';
-  uiContainer.style.fontSize = '16px';
+  uiContainer.style.fontSize = isMobile ? '16px' : '16px';
   uiContainer.style.padding = isMobile ? '8px' : '10px';
 
-  // Heading
   const heading = document.createElement('h3');
   heading.innerText = 'Game Setup';
   uiContainer.appendChild(heading);
@@ -44,7 +40,7 @@ function buildUI() {
   uiContainer.appendChild(document.createElement('br'));
   uiContainer.appendChild(document.createElement('br'));
 
-  // 3) Correlation
+  // 3) Correlation input
   const corrLabel = document.createElement('label');
   corrLabel.innerText = 'Correlation (-1 to 1): ';
   uiContainer.appendChild(corrLabel);
@@ -59,7 +55,7 @@ function buildUI() {
   uiContainer.appendChild(document.createElement('br'));
   uiContainer.appendChild(document.createElement('br'));
 
-  // 4) Leakage
+  // 4) Leakage input
   const leakLabel = document.createElement('label');
   leakLabel.innerText = 'Leakage: ';
   uiContainer.appendChild(leakLabel);
@@ -76,7 +72,7 @@ function buildUI() {
   uiContainer.appendChild(document.createElement('br'));
   uiContainer.appendChild(document.createElement('br'));
 
-  // 5) Grid size
+  // 5) Grid size dropdown
   const gridSizeLabel = document.createElement('label');
   gridSizeLabel.innerText = 'Grid Size (4,6,8,10): ';
   uiContainer.appendChild(gridSizeLabel);
@@ -92,7 +88,7 @@ function buildUI() {
   uiContainer.appendChild(document.createElement('br'));
   uiContainer.appendChild(document.createElement('br'));
 
-  // 6) Farmer Claims
+  // 6) Farmer Claims dropdown
   const fClaimsLabel = document.createElement('label');
   fClaimsLabel.innerText = 'Farmer Claims: ';
   uiContainer.appendChild(fClaimsLabel);
@@ -135,11 +131,9 @@ function buildUI() {
   };
   updateClaimOptions();
 
-  // Start Game button
   const startBtn = document.createElement('button');
   startBtn.innerText = 'Start Game';
   startBtn.onclick = () => {
-    // Gather user choices
     const userTeam         = sideSelect.value;
     const computerStrategy = compStratSelect.value;
     const correlation      = corrInput.value;
@@ -148,14 +142,9 @@ function buildUI() {
     const greenClaims      = gClaimsDisplay.value;
     const gridSize         = gridSizeSelect.value;
 
-    // Hide the UI, hide terrain
     uiContainer.style.display = 'none';
     document.getElementById('terrain-wrapper').style.display = 'none';
-    
-    // Show the Phaser game container
-    document.getElementById('game-container').style.display = 'block';
 
-    // Launch Phaser
     startPhaserGame({
       userTeam,
       computerStrategy,
@@ -168,7 +157,6 @@ function buildUI() {
   };
   uiContainer.appendChild(startBtn);
 
-  // Populate strategy options
   function updateStrategyOptions() {
     const humanSide = sideSelect.value;
     compStratSelect.innerHTML = '';
@@ -194,5 +182,4 @@ function buildUI() {
   updateStrategyOptions();
 }
 
-// Build the UI immediately
 buildUI();

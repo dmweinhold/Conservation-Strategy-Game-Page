@@ -1,6 +1,4 @@
-
 // strategy.js
-
 export function computerChoosePlot(strategy, grid, claimParam) {
   // Gather all unclaimed cells
   let unclaimedCells = [];
@@ -16,19 +14,19 @@ export function computerChoosePlot(strategy, grid, claimParam) {
 
   let chosenCell = null;
 
-  // Farmer strategy
+  // Farmer strategy check:
   if (strategy.toLowerCase().includes("profit maximizer")) {
     // e.g. "naive profit maximizer"
     let bestVal = -Infinity;
     unclaimedCells.forEach(cell => {
-      if (cell.cellData.ag > bestVal) {
+      if (cell.cellData.ag >= 0 && cell.cellData.ag > bestVal) {
         bestVal = cell.cellData.ag;
         chosenCell = cell;
       }
     });
-  }
+  } 
   else {
-    // Green strategy
+    // Then it's a Green strategy
     if (strategy === 'maximize environmental score') {
       let bestVal = -Infinity;
       unclaimedCells.forEach(cell => {
@@ -63,7 +61,7 @@ export function computerChoosePlot(strategy, grid, claimParam) {
       });
     } 
     else {
-      // random fallback
+      // If missing or random, etc.
       const randIndex = Math.floor(Math.random() * unclaimedCells.length);
       chosenCell = unclaimedCells[randIndex];
     }
