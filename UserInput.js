@@ -1,13 +1,14 @@
 // UserInput.js
+
 import { startPhaserGame } from './main.js';
 
 const uiContainer = document.getElementById('ui-container');
 
 function buildUI() {
-  const isMobile = window.innerWidth < 768;
-  uiContainer.style.width = isMobile ? '95%' : '300px';
-  uiContainer.style.fontSize = isMobile ? '16px' : '16px';
-  uiContainer.style.padding = isMobile ? '8px' : '10px';
+  // Basic styling
+  uiContainer.style.width = '300px';
+  uiContainer.style.fontSize = '16px';
+  uiContainer.style.padding = '10px';
 
   const heading = document.createElement('h3');
   heading.innerText = 'Game Setup';

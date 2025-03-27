@@ -1,4 +1,4 @@
-const CACHE_NAME = 'conservation-game-v1.0.9'; // or whatever version you prefer
+const CACHE_NAME = 'conservation-game-v1.5.3'; // or whatever version you prefer
 
 const urlsToCache = [
   '/',
