@@ -558,8 +558,8 @@ export function displayFinalResults(scene) {
     statsContainer.style.padding = '20px';
     statsContainer.style.width   = '300px';
   } else {
-    statsContainer.style.padding = '20px';
-    statsContainer.style.width   = '50%'; 
+    statsContainer.style.padding = '10px';
+    statsContainer.style.width   = '45%'; 
   }
 
   // Title
