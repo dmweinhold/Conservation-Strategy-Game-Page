@@ -1,0 +1,52 @@
+<script type="application/json" id="summary-lookup-json">
+{
+  "Eco-Champion": {
+    "Master Allocator": "You achieved near-perfect conservation *and* efficiency. Are you secretly a policy AI?",
+    "Smart Siting": "Elegant and impactful. You played like an eco-technocrat with vision.",
+    "Thoughtful Planner": "Your land use wisdom shines through — nature and society thank you.",
+    "Mixed Results": "Brilliant conservation, but some land use missteps held you back.",
+    "Wasted Opportunity": "You protected the earth, but at a steep societal cost. A noble imbalance.",
+    "Misguided Strategy": "An environmental triumph—but it came at the cost of major misallocation."
+  },
+  "Strategist": {
+    "Master Allocator": "Impressive foresight! You married strategy with efficient planning.",
+    "Smart Siting": "You struck a smart balance between priorities. Nice one.",
+    "Thoughtful Planner": "You showed good instincts on both fronts — solid stewardship.",
+    "Mixed Results": "Your targeting was strong, but a few hiccups in land use optimization.",
+    "Wasted Opportunity": "You were focused, but society paid more than necessary.",
+    "Misguided Strategy": "Your values were in the right place — the logistics, not so much."
+  },
+  "Advocate": {
+    "Master Allocator": "A steady, thoughtful performance. You’re the pragmatic conservationist.",
+    "Smart Siting": "Good choices overall. Not flashy, but commendable.",
+    "Thoughtful Planner": "Nice work! You leaned green, but kept social needs in sight.",
+    "Mixed Results": "A middle-of-the-road result. Balanced, if not optimized.",
+    "Wasted Opportunity": "Your strategy leaned green, but the cost was significant.",
+    "Misguided Strategy": "Some misfires in land use decisions held your impact back."
+  },
+  "Guardian": {
+    "Master Allocator": "Not bad! With a little more ambition, you could become a legend.",
+    "Smart Siting": "You played it cautious — maybe too cautious — but kept harm minimal.",
+    "Thoughtful Planner": "You did okay across the board, but lacked decisive impact.",
+    "Mixed Results": "Decent work, though neither side of the strategy fully shone.",
+    "Wasted Opportunity": "Could’ve done more — both in targeting and efficiency.",
+    "Misguided Strategy": "You kept things running, but neither nature nor society came out on top."
+  },
+  "Aspirant": {
+    "Master Allocator": "A surprise win for the people! Less so for the planet.",
+    "Smart Siting": "You made efficient choices — now, time to up your green game.",
+    "Thoughtful Planner": "Sensible allocations, but lacking strong environmental impact.",
+    "Mixed Results": "An okay effort — maybe next time focus a bit more.",
+    "Wasted Opportunity": "Neither side saw your best. Regroup and come back smarter.",
+    "Misguided Strategy": "Efficiency wasn’t terrible, but conservation got left behind."
+  },
+  "Rookie": {
+    "Master Allocator": "Maximum efficiency... but nature weeps a little. Great planner, no hugger.",
+    "Smart Siting": "You’re all logic, no leaves. A solid first run — now try loving some trees.",
+    "Thoughtful Planner": "Good resource use, but too little love for the land.",
+    "Mixed Results": "You’re learning. Some smart picks, but conservation got lost.",
+    "Wasted Opportunity": "You missed the mark on both fronts — time to study up.",
+    "Misguided Strategy": "A rocky start. Neither nature nor society benefited much. But every rookie improves!"
+  }
+}
+</script>
