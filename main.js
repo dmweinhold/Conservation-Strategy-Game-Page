@@ -271,7 +271,6 @@ class MyScene extends Phaser.Scene {
           : this.availFarmerClaims;
         const move = computerChoosePlot(this.computerStrategy, this.grid, claimParam);
         if (move) {
-          // Perform AI's move
           this.grid[move.row][move.col].emit('pointerdown');
         } else {
           this.input.enabled = true;
@@ -295,11 +294,11 @@ class MyScene extends Phaser.Scene {
  * Creates a full-screen HTML overlay that shows:
  *   1) Plain vanilla stats (left side)
  *   2) A color-coded 6x6 chart + star (right side)
- *   3) A short summary narrative
+ *   3) A short summary narrative from summary-lookup.json
  *   4) Two buttons: "Play Again" and "Start Over"
  ****************************************************/
 export function displayFinalResults(scene) {
-  // Detect orientation again
+  // 1) Orientation check
   const isLandscape = window.innerWidth > window.innerHeight;
 
   // --- Helper: getCategoryIndices ---
@@ -374,6 +373,7 @@ export function displayFinalResults(scene) {
       bottomLeft:  "#C89F9C"
     };
 
+    // Draw 6x6 colored squares
     for (let row = 0; row < 6; row++) {
       for (let col = 0; col < 6; col++) {
         let color;
@@ -398,6 +398,7 @@ export function displayFinalResults(scene) {
     const starY = offsetY + (5 - welfareIndex + 0.5) * cellSize;
     drawStar(ctx, starX, starY, 5, cellSize * 0.4, cellSize * 0.2, '#ff0000');
 
+    // Axis tick labels
     const conservationLabels = [
       "Ecocidal", "Biophobe", "Guardian",
       "Advocate", "Steward", "Eco-Champion"
@@ -416,11 +417,11 @@ export function displayFinalResults(scene) {
     ctx.textAlign   = 'center';
     ctx.textBaseline= 'middle';
 
+    // Bottom axis (conservation)
     for (let col = 0; col < 6; col++) {
       const label = conservationLabels[col];
       const labelX = offsetX + (col + 0.5) * cellSize;
       const labelY = offsetY + chartSize + 5;
-
       ctx.save();
       ctx.translate(labelX, labelY);
       ctx.rotate(-60 * Math.PI / 180);
@@ -428,7 +429,7 @@ export function displayFinalResults(scene) {
       ctx.textBaseline = 'middle';
       ctx.font = tickLabelFont;
       if (label === "Eco-Champion") {
-        // special multi-line
+        // multi-line for "Eco-Champion"
         ctx.textBaseline = 'top';
         ctx.textAlign = 'left';
         ctx.fillText("Eco-", -48, -8);
@@ -439,6 +440,7 @@ export function displayFinalResults(scene) {
       ctx.restore();
     }
 
+    // Left axis (welfare)
     for (let row = 0; row < 6; row++) {
       const label = welfareLabels[row];
       const labelX = offsetX - 10;
@@ -470,6 +472,7 @@ export function displayFinalResults(scene) {
     ctx.fillText("Social Welfare", 0, 0);
     ctx.restore();
 
+    // Star-drawing helper
     function drawStar(ctx, centerX, centerY, spikes, outerRadius, innerRadius, color) {
       ctx.save();
       ctx.beginPath();
@@ -515,7 +518,7 @@ export function displayFinalResults(scene) {
   const { greenIndex, welfareIndex } = getCategoryIndices(gPct, wPct);
 
   // ---------------------------------------------------------
-  // 2) Retrieve summary text
+  // 2) Retrieve summary text from JSON
   // ---------------------------------------------------------
   const { greenLabel, welfareLabel, narrative } = getSummaryText(greenIndex, welfareIndex);
 
@@ -541,7 +544,6 @@ export function displayFinalResults(scene) {
   if (isLandscape) {
     overlay.style.padding = '20px'; 
   } else {
-    // narrower padding in portrait
     overlay.style.padding = '5px 10px';
   }
 
@@ -556,8 +558,8 @@ export function displayFinalResults(scene) {
     statsContainer.style.padding = '20px';
     statsContainer.style.width   = '300px';
   } else {
-    statsContainer.style.padding = '5px';
-    statsContainer.style.width   = '80%'; 
+    statsContainer.style.padding = '20px';
+    statsContainer.style.width   = '50%'; 
   }
 
   // Title
@@ -618,7 +620,7 @@ export function displayFinalResults(scene) {
     chartContainer.style.width   = '450px';
   } else {
     chartContainer.style.padding = '5px';
-    chartContainer.style.width   = '80%'; 
+    chartContainer.style.width   = '100%'; 
   }
 
   // Canvas for the chart
@@ -647,7 +649,7 @@ export function displayFinalResults(scene) {
   btnContainer.style.display         = 'flex';
   btnContainer.style.justifyContent  = 'center';
 
-  // We need a single btnStyle variable in scope:
+  // Define a single btnStyle var in scope
   let btnStyle;
   if (isLandscape) {
     btnStyle = `
@@ -695,17 +697,18 @@ export function displayFinalResults(scene) {
   };
   btnContainer.appendChild(startOverBtn);
 
-  // --- Create a container (rowContainer) to hold stats + chart ---
+  // --- Create a row container to hold the stats and chart side-by-side ---
   const rowContainer = document.createElement('div');
   rowContainer.style.display = 'flex';
 
   if (isLandscape) {
+    // side-by-side
     rowContainer.style.flexDirection  = 'row';
     rowContainer.style.alignItems     = 'stretch';
     rowContainer.style.justifyContent = 'center';
     rowContainer.style.gap            = '20px';
-    // We already set widths above, so no need to re-set them here
   } else {
+    // stacked
     rowContainer.style.flexDirection  = 'column';
     rowContainer.style.alignItems     = 'center';
     rowContainer.style.gap            = '10px';
@@ -717,6 +720,18 @@ export function displayFinalResults(scene) {
   // Append rowContainer and btnContainer to the overlay
   overlay.appendChild(rowContainer);
   overlay.appendChild(btnContainer);
+
+  // --- Tighter font/spacing for portrait mode only ---
+  if (!isLandscape) {
+    [statsContainer, chartContainer].forEach(container => {
+      container.querySelectorAll('h1, h2, h3, p').forEach(el => {
+        el.style.fontSize     = '0.9em'; // or 0.85em, etc.
+        el.style.lineHeight   = '1.2';
+        el.style.marginTop    = '0.3em';
+        el.style.marginBottom = '0.3em';
+      });
+    });
+  }
 
   // Finally, add the overlay to the document body
   document.body.appendChild(overlay);
