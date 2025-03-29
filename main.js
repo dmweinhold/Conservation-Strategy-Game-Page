@@ -11,7 +11,6 @@ import {
   calculateAdditionality
 } from './gameLogic.js';
 
-
 /**
  * A single scene class for the main game.
  */
@@ -107,8 +106,6 @@ class MyScene extends Phaser.Scene {
       gameH = 900;
     }
 
-    const phaserWidth  = this.sys.game.scale.gameSize.width;
-    const phaserHeight = this.sys.game.scale.gameSize.height;
     // We'll use our chosen dimensions:
     const gameWidth  = gameW;
     const gameHeight = gameH;
@@ -274,6 +271,7 @@ class MyScene extends Phaser.Scene {
           : this.availFarmerClaims;
         const move = computerChoosePlot(this.computerStrategy, this.grid, claimParam);
         if (move) {
+          // Perform AI's move
           this.grid[move.row][move.col].emit('pointerdown');
         } else {
           this.input.enabled = true;
@@ -297,15 +295,14 @@ class MyScene extends Phaser.Scene {
  * Creates a full-screen HTML overlay that shows:
  *   1) Plain vanilla stats (left side)
  *   2) A color-coded 6x6 chart + star (right side)
- *   3) A short summary narrative from summary-lookup.json
+ *   3) A short summary narrative
  *   4) Two buttons: "Play Again" and "Start Over"
  ****************************************************/
 export function displayFinalResults(scene) {
+  // Detect orientation again
   const isLandscape = window.innerWidth > window.innerHeight;
-  
-  
-  // --- Helper: getCategoryIndices ---
 
+  // --- Helper: getCategoryIndices ---
   function getCategoryIndices(greenSuccessPct, welfareLossPct) {
     let greenIndex;
     if (greenSuccessPct < 70)      greenIndex = 0;
@@ -423,6 +420,7 @@ export function displayFinalResults(scene) {
       const label = conservationLabels[col];
       const labelX = offsetX + (col + 0.5) * cellSize;
       const labelY = offsetY + chartSize + 5;
+
       ctx.save();
       ctx.translate(labelX, labelY);
       ctx.rotate(-60 * Math.PI / 180);
@@ -430,6 +428,7 @@ export function displayFinalResults(scene) {
       ctx.textBaseline = 'middle';
       ctx.font = tickLabelFont;
       if (label === "Eco-Champion") {
+        // special multi-line
         ctx.textBaseline = 'top';
         ctx.textAlign = 'left';
         ctx.fillText("Eco-", -48, -8);
@@ -449,6 +448,7 @@ export function displayFinalResults(scene) {
       ctx.fillText(label, labelX, labelY);
     }
 
+    // Axis labels
     const axisLabelX = offsetX + (chartSize / 2);
     const axisLabelY = offsetY + chartSize + 60;
     ctx.save();
@@ -515,7 +515,7 @@ export function displayFinalResults(scene) {
   const { greenIndex, welfareIndex } = getCategoryIndices(gPct, wPct);
 
   // ---------------------------------------------------------
-  // 2) Retrieve summary text from JSON
+  // 2) Retrieve summary text
   // ---------------------------------------------------------
   const { greenLabel, welfareLabel, narrative } = getSummaryText(greenIndex, welfareIndex);
 
@@ -536,16 +536,29 @@ export function displayFinalResults(scene) {
   overlay.style.flexDirection   = 'column';
   overlay.style.alignItems      = 'center';
   overlay.style.justifyContent  = 'flex-start';
-  overlay.style.padding         = '20px';
 
-  // --- Create stats container (narrower) ---
+  // Adjust top/bottom padding for overlay
+  if (isLandscape) {
+    overlay.style.padding = '20px'; 
+  } else {
+    // narrower padding in portrait
+    overlay.style.padding = '5px 10px';
+  }
+
+  // --- Create stats container ---
   const statsContainer = document.createElement('div');
-  statsContainer.style.width           = '300px';  // changed from 500px to 350px
-  statsContainer.style.marginRight     = '20px';
   statsContainer.style.backgroundColor = '#fff';
   statsContainer.style.border          = '1px solid #ccc';
   statsContainer.style.borderRadius    = '10px';
-  statsContainer.style.padding         = '20px';
+
+  // Different padding in portrait vs. landscape
+  if (isLandscape) {
+    statsContainer.style.padding = '20px';
+    statsContainer.style.width   = '300px';
+  } else {
+    statsContainer.style.padding = '5px';
+    statsContainer.style.width   = '80%'; 
+  }
 
   // Title
   const title = document.createElement('h1');
@@ -594,13 +607,19 @@ export function displayFinalResults(scene) {
     statsContainer.appendChild(pGreenFrac);
   }
 
-  // --- Create chart container (wider) ---
+  // --- Create chart container ---
   const chartContainer = document.createElement('div');
-  chartContainer.style.width           = '450px';  // changed from 500px to 600px
   chartContainer.style.backgroundColor = '#fff';
   chartContainer.style.border          = '1px solid #ccc';
   chartContainer.style.borderRadius    = '10px';
-  chartContainer.style.padding         = '20px';
+
+  if (isLandscape) {
+    chartContainer.style.padding = '20px';
+    chartContainer.style.width   = '450px';
+  } else {
+    chartContainer.style.padding = '5px';
+    chartContainer.style.width   = '80%'; 
+  }
 
   // Canvas for the chart
   const chartCanvas = document.createElement('canvas');
@@ -628,16 +647,31 @@ export function displayFinalResults(scene) {
   btnContainer.style.display         = 'flex';
   btnContainer.style.justifyContent  = 'center';
 
-  const btnStyle = `
-    margin: 10px;
-    padding: 12px 20px;
-    border: none;
-    border-radius: 5px;
-    background-color: #228B22;
-    color: #ffffff;
-    font-size: 1em;
-    cursor: pointer;
-  `;
+  // We need a single btnStyle variable in scope:
+  let btnStyle;
+  if (isLandscape) {
+    btnStyle = `
+      margin: 10px;
+      padding: 12px 20px;
+      border: none;
+      border-radius: 5px;
+      background-color: #228B22;
+      color: #ffffff;
+      font-size: 1em;
+      cursor: pointer;
+    `;
+  } else {
+    btnStyle = `
+      margin: 10px;
+      padding: 6px 10px;
+      border: none;
+      border-radius: 5px;
+      background-color: #228B22;
+      color: #ffffff;
+      font-size: 1em;
+      cursor: pointer;
+    `;
+  }
 
   // "Play Again" button
   const playAgainBtn = document.createElement('button');
@@ -661,32 +695,21 @@ export function displayFinalResults(scene) {
   };
   btnContainer.appendChild(startOverBtn);
 
-  // --- Create a row container to hold the stats and chart side-by-side ---
+  // --- Create a container (rowContainer) to hold stats + chart ---
   const rowContainer = document.createElement('div');
-  rowContainer.style.display        = 'flex';
+  rowContainer.style.display = 'flex';
+
   if (isLandscape) {
-  rowContainer.style.flexDirection  = 'row';
-  rowContainer.style.alignItems     = 'stretch';
-  rowContainer.style.justifyContent = 'center';
-  rowContainer.style.gap            = '20px';
-  // optional: fix widths for each container
-  statsContainer.style.width = '300px';
-  chartContainer.style.width = '450px';
+    rowContainer.style.flexDirection  = 'row';
+    rowContainer.style.alignItems     = 'stretch';
+    rowContainer.style.justifyContent = 'center';
+    rowContainer.style.gap            = '20px';
+    // We already set widths above, so no need to re-set them here
+  } else {
+    rowContainer.style.flexDirection  = 'column';
+    rowContainer.style.alignItems     = 'center';
+    rowContainer.style.gap            = '10px';
   }
-
-  else {
-    rowContainer.style.flexDirection = 'column';  // stacked vertically
-    rowContainer.style.alignItems    = 'center';  // center them?
-    rowContainer.style.gap           = '10px';
-  
-    // maybe we want them to fill more horizontal space in portrait,
-    // so we can say 90% wide, for example:
-    statsContainer.style.width = '90%';
-    chartContainer.style.width = '90%';
-    // Or keep them narrower if you prefer. Up to you!
-  }
-  
-
 
   rowContainer.appendChild(statsContainer);
   rowContainer.appendChild(chartContainer);
