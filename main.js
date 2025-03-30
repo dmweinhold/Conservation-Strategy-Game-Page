@@ -43,8 +43,18 @@ class MyScene extends Phaser.Scene {
     computerStrategy = computerStrategy || 'naive profit maximizer';
 
     this.currentPlayer = 'farmer'; // farmer goes first
-    let corrVal  = parseFloat(correlation) || 0;
-    this.leakage = parseFloat(leakage)     || 0.5;
+     // Safely parse correlation
+    let corrVal = parseFloat(correlation);
+    if (Number.isNaN(corrVal)) {
+      corrVal = 0;
+    }
+    // Safely parse leakage, keeping "0" if that’s what the user chose
+    const parsedLeakage = parseFloat(leakage);
+    if (!Number.isNaN(parsedLeakage)) {
+      this.leakage = parsedLeakage; 
+    } else {
+      this.leakage = 0.5;
+    }
     farmerClaims = parseInt(farmerClaims, 10) || 8;
     greenClaims  = parseInt(greenClaims, 10)  || 8;
     gridSize     = parseInt(gridSize, 10);
