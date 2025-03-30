@@ -567,11 +567,6 @@ export function displayFinalResults(scene) {
   title.textContent = 'Final Results';
   statsContainer.appendChild(title);
 
-  // Sub-heading: Metrics
-  const headingMetrics = document.createElement('h3');
-  headingMetrics.textContent = 'Metrics';
-  statsContainer.appendChild(headingMetrics);
-
   // Green Score
   const pGreen = document.createElement('p');
   pGreen.textContent = `Green Score: ${scene.greenScore}`;
