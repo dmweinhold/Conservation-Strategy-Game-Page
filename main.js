@@ -558,7 +558,7 @@ export function displayFinalResults(scene) {
     statsContainer.style.padding = '20px';
     statsContainer.style.width   = '300px';
   } else {
-    statsContainer.style.padding = '10px';
+    statsContainer.style.padding = '5px';
     statsContainer.style.width   = '45%'; 
   }
 
@@ -620,7 +620,7 @@ export function displayFinalResults(scene) {
     chartContainer.style.width   = '450px';
   } else {
     chartContainer.style.padding = '5px';
-    chartContainer.style.width   = '100%'; 
+    chartContainer.style.width   = '88%'; 
   }
 
   // Canvas for the chart
@@ -644,6 +644,12 @@ export function displayFinalResults(scene) {
   // --- Create button container ---
   const btnContainer = document.createElement('div');
   btnContainer.style.marginTop       = '20px';
+  if (!isLandscape) {
+    // e.g. make it 10px or 5px in portrait
+    chartContainer.style.paddingBottom = '1px';
+    btnContainer.style.marginTop = '4px';
+  }
+  
   btnContainer.style.textAlign       = 'center';
   btnContainer.style.width           = '100%';
   btnContainer.style.display         = 'flex';
